@@ -1,1421 +1,244 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<title>해화이거래소</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --ink-900:#08120e;
-    --ink-800:#0d1c16;
-    --ink-700:#12261d;
-    --ink-600:#1a3327;
-    --line:#2b4536;
-    --gold:#c9a227;
-    --gold-bright:#e6c34f;
-    --cream:#ece4d0;
-    --cream-dim:#a9b6ac;
-    --up:#5fbf85;
-    --down:#d4553f;
-    --shadow:0 10px 30px rgba(0,0,0,.45);
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:
-      radial-gradient(1200px 600px at 15% -10%, #143324 0%, transparent 60%),
-      radial-gradient(1000px 500px at 110% 10%, #1a2e1f 0%, transparent 55%),
-      var(--ink-900);
-    color:var(--cream);
-    font-family:'Noto Sans KR',sans-serif;
-    min-height:100vh;
-    overflow-x:hidden;
-  }
-  .mono{font-family:'JetBrains Mono',monospace;}
-  .serif{font-family:'Gowun Batang',serif;}
+parseInt(qty, 10);
+  if(isNaN(qty) || qty <= 0) return;
 
-  /* ===== Ticker tape ===== */
-  .ticker-wrap{
-    background:linear-gradient(180deg,#0a1712,#0d1c16);
-    border-bottom:1px solid var(--line);
-    overflow:hidden;
-    white-space:nowrap;
-    position:sticky;top:0;
-    z-index:50;
-  }
-  .ticker-track{
-    display:inline-block;
-    padding:9px 0;
-    animation:scroll-left 26s linear infinite;
-  }
-  .ticker-item{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    margin:0 26px;
-    font-family:'JetBrains Mono',monospace;
-    font-size:13px;
-    letter-spacing:.02em;
-  }
-  .ticker-item .nm{color:var(--cream-dim);}
-  .ticker-item .up{color:var(--up);}
-  .ticker-item .down{color:var(--down);}
-  @keyframes scroll-left{
-    from{transform:translateX(0);}
-    to{transform:translateX(-50%);}
-  }
-
-  /* ===== Header ===== */
-  header{
-    max-width:1360px;margin:0 auto;
-    padding:34px 20px 18px;
-    display:flex;justify-content:space-between;align-items:flex-end;
-    gap:20px;flex-wrap:wrap;
-    border-bottom:1px solid var(--line);
-  }
-  .brand-eyebrow{
-    color:var(--gold);
-    font-size:11px;letter-spacing:.32em;
-    text-transform:uppercase;
-    margin:0 0 6px;
-  }
-  h1{
-    font-family:'Gowun Batang',serif;
-    font-size:38px;margin:0;
-    color:var(--cream);
-    letter-spacing:.01em;
-  }
-  h1 span{color:var(--gold-bright);}
-  .wallet{
-    text-align:right;
-  }
-  .wallet .label{font-size:11px;color:var(--cream-dim);letter-spacing:.12em;text-transform:uppercase;}
-  .wallet .value{
-    font-family:'JetBrains Mono',monospace;
-    font-size:30px;font-weight:700;color:var(--gold-bright);
-  }
-  .wallet .sub{font-size:12px;color:var(--cream-dim);margin-top:2px;}
-
-  /* ===== Layout ===== */
-  .layout{
-    max-width:1360px;margin:0 auto;
-    padding:26px 20px 80px;
-    display:grid;
-    grid-template-columns:1fr 320px;
-    gap:22px;
-  }
-  @media (max-width:980px){.layout{grid-template-columns:1fr;}}
-
-  .board-title{
-    font-family:'Gowun Batang',serif;
-    font-size:16px;color:var(--gold);
-    margin:0 0 12px;
-    display:flex;align-items:center;gap:10px;
-  }
-  .board-title::after{content:"";flex:1;height:1px;background:var(--line);}
-  .board-sub{
-    font-size:11.5px;color:var(--cream-dim);
-    margin:-4px 0 14px;line-height:1.5;
-  }
-  .board-sub b{color:var(--gold);font-weight:700;}
-
-  .grid-items{
-    display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;
-  }
-  @media (max-width:980px){.grid-items{grid-template-columns:1fr 1fr;}}
-  @media (max-width:600px){.grid-items{grid-template-columns:1fr;}}
-
-  .card{
-    background:linear-gradient(180deg,var(--ink-700),var(--ink-800));
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:16px;
-    position:relative;
-    overflow:hidden;
-    transition:border-color .3s ease, transform .2s ease;
-  }
-  .card.flash-up{animation:flashUp .7s ease;}
-  .card.flash-down{animation:flashDown .7s ease;}
-  @keyframes flashUp{0%{background:rgba(95,191,133,.18);}100%{background:transparent;}}
-  @keyframes flashDown{0%{background:rgba(212,85,63,.18);}100%{background:transparent;}}
-  .card.event-hit{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset, 0 0 24px rgba(201,162,39,.25);}
-
-  .card-top{display:flex;justify-content:space-between;align-items:center;}
-  .card-name{font-size:15px;font-weight:700;color:var(--cream);}
-  .card-emoji{font-size:20px;margin-right:6px;}
-
-  .mode-toggle{
-    display:flex;gap:2px;flex-shrink:0;margin-left:8px;
-    background:var(--ink-900);border:1px solid var(--line);
-    border-radius:20px;padding:2px;
-  }
-  .mode-btn{
-    border:none;background:transparent;color:var(--cream-dim);
-    font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:16px;
-    cursor:pointer;transition:background .15s ease, color .15s ease;
-    white-space:nowrap;
-  }
-  .mode-btn.active{background:var(--gold);color:#1a1305;}
-  .mode-btn:not(.active):hover{color:var(--cream);}
-  .card-price{
-    font-family:'JetBrains Mono',monospace;
-    font-size:22px;font-weight:700;margin-top:2px;
-  }
-  .card-delta{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;}
-  .up{color:var(--up);}
-  .down{color:var(--down);}
-  .flat{color:var(--cream-dim);}
-
-  canvas.spark{width:100%;height:44px;display:block;margin:10px 0 8px;}
-
-  .holding-line{
-    display:flex;justify-content:space-between;
-    font-size:11px;color:var(--cream-dim);
-    margin-bottom:8px;
-    font-family:'JetBrains Mono',monospace;
-  }
-  .return-line{
-    font-size:10.5px;margin:-4px 0 8px;font-weight:700;min-height:0;
-  }
-  .return-line.up{color:var(--up);}
-  .return-line.down{color:var(--down);}
-  
-  .margin-line{
-    font-size:10.5px;color:var(--gold-bright);margin:-4px 0 8px;
-    font-weight:700;min-height:0;
-  }
-  
-  .trade-row{display:flex;gap:6px;}
-  .trade-row-2{display:flex;gap:6px;margin-top:6px;}
-  .btn-mini{
-    flex:1;border:1px solid var(--line);border-radius:6px;
-    background:var(--ink-900);color:var(--cream-dim);
-    padding:6px 4px;font-size:10.5px;font-weight:700;
-    cursor:pointer;transition:filter .15s ease, border-color .15s ease, color .15s ease;
-  }
-  .btn-mini:hover:not(:disabled){border-color:var(--gold);color:var(--gold-bright);}
-  .btn-mini:active:not(:disabled){transform:scale(.96);}
-  .btn-mini:disabled{opacity:.35;cursor:not-allowed;}
-  .btn-mini.hidden{display:none;}
-  .trade-row input{
-    width:48px;background:var(--ink-900);
-    border:1px solid var(--line);border-radius:6px;
-    color:var(--cream);text-align:center;
-    font-family:'JetBrains Mono',monospace;font-size:13px;
-    padding:7px 4px;
-  }
-  .trade-row input:focus{outline:1px solid var(--gold);}
-  .lev-select{
-    width:48px;background:var(--ink-900);
-    border:1px solid var(--line);border-radius:6px;
-    color:var(--gold-bright);text-align:center;
-    font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
-    padding:7px 2px;cursor:pointer;
-  }
-  .lev-select:focus{outline:1px solid var(--gold);}
-  .btn{
-    flex:1;border:none;border-radius:6px;
-    padding:7px 6px;font-size:12px;font-weight:700;
-    cursor:pointer;transition:filter .15s ease, transform .1s ease;
-    letter-spacing:.02em;
-  }
-  .btn:active{transform:scale(.96);}
-  .btn-buy{background:var(--up);color:#0b1d13;}
-  .btn-sell{background:var(--down);color:#241009;}
-  .btn:disabled{opacity:.35;cursor:not-allowed;}
-  .btn:hover:not(:disabled){filter:brightness(1.12);}
-
-  /* ===== Leaderboard ===== */
-  .board{
-    background:linear-gradient(180deg,var(--ink-700),var(--ink-800));
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:18px 16px;
-    height:fit-content;
-    position:sticky;top:70px;
-  }
-  .job-board{ position:static; margin-bottom:18px; }
-  .bankruptcy-board{ position:static; margin-bottom:18px; }
-  .bankruptcy-btn{
-    width:100%;padding:14px 12px;
-    background:var(--down);color:#2b0d06;
-    border:none;border-radius:10px;
-    font-weight:800;font-size:14px;cursor:pointer;
-    transition:filter .15s ease, transform .08s ease;
-    letter-spacing:.01em;
-  }
-  .bankruptcy-btn:hover:not(:disabled){filter:brightness(1.1);}
-  .bankruptcy-btn:active:not(:disabled){transform:scale(.97);}
-  .bankruptcy-btn:disabled{
-    background:var(--ink-900);color:var(--cream-dim);
-    border:1px solid var(--line);cursor:not-allowed;
-  }
-  
-  .fund-board{ position:static; margin-bottom:18px; }
-  .fund-select, .fund-amount{
-    width:100%;background:var(--ink-900);
-    border:1px solid var(--line);border-radius:8px;
-    color:var(--cream);font-size:13px;
-    padding:9px 10px;margin-bottom:8px;
-    font-family:'JetBrains Mono',monospace;
-  }
-  .fund-select{color:var(--gold-bright);cursor:pointer;}
-  .fund-select:focus, .fund-amount:focus{outline:1px solid var(--gold);}
-  .fund-invest-btn{
-    width:100%;padding:12px;border:none;border-radius:8px;
-    background:linear-gradient(135deg,var(--gold-bright),var(--gold));
-    color:#1a1305;font-weight:800;font-size:13px;cursor:pointer;
-    transition:filter .15s ease, transform .08s ease;
-  }
-  .fund-invest-btn:hover{filter:brightness(1.08);}
-  .fund-invest-btn:active{transform:scale(.97);}
-  .fund-active-list{margin-top:12px;display:flex;flex-direction:column;gap:6px;}
-  .fund-row{
-    display:flex;justify-content:space-between;align-items:center;gap:8px;
-    background:var(--ink-900);border:1px solid var(--line);border-radius:8px;
-    padding:8px 10px;font-size:11.5px;
-  }
-  .fund-row-name{color:var(--cream);font-weight:700;flex-shrink:0;}
-  .fund-row-amount{color:var(--cream-dim);flex:1;text-align:right;}
-  .fund-row-timer{color:var(--gold-bright);flex-shrink:0;}
-  .fund-empty{color:var(--cream-dim);font-size:11.5px;text-align:center;padding:8px 0;}
-
-  .lottery-board{ position:static; margin-bottom:18px; }
-  .lottery-buy-btn{
-    width:100%;padding:12px;border:none;border-radius:8px;
-    background:linear-gradient(135deg,#c1442e,var(--gold));
-    color:#1a1305;font-weight:800;font-size:13px;cursor:pointer;
-    transition:filter .15s ease, transform .08s ease;
-  }
-  .lottery-buy-btn:hover:not(:disabled){filter:brightness(1.08);}
-  .lottery-buy-btn:active:not(:disabled){transform:scale(.97);}
-  .lottery-buy-btn:disabled{background:var(--ink-900);color:var(--cream-dim);cursor:not-allowed;}
-
-  .lottery-modal-card{ text-align:center; }
-  .lottery-modal-desc{font-size:12.5px;color:var(--cream-dim);margin:0 0 16px;}
-  .scratch-canvas{
-    width:100%;max-width:300px;height:150px;
-    border-radius:10px;border:1px solid var(--line);
-    cursor:pointer;touch-action:none;
-    display:block;margin:0 auto 12px;
-  }
-  .lottery-modal-result{
-    margin-top:12px;font-size:14px;min-height:20px;color:var(--cream-dim);
-  }
-  .lottery-modal-result b{color:var(--gold-bright);}
-  .modal-card button.secondary{
-    background:transparent;border:1px solid var(--line);
-    color:var(--cream-dim);margin-top:10px;
-  }
-  .modal-card button.secondary:hover{border-color:var(--cream-dim);filter:none;color:var(--cream);}
-  .modal-card button.danger{background:var(--down);color:#2b0d06;}
-
-  .job-toast-wrap{ position:relative; height:0; }
-  .job-toast{
-    position:absolute;left:50%;top:-4px;transform:translateX(-50%);
-    color:var(--up);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;
-    animation:floatUp .9s ease forwards;
-    pointer-events:none;white-space:nowrap;
-  }
-  .job-toast.crit{
-    color:var(--gold-bright);font-size:16px;font-weight:900;
-    animation:floatUpCrit 1.1s ease forwards;
-    text-shadow:0 0 10px rgba(230,195,79,.6);
-  }
-  @keyframes floatUp{
-    0%{opacity:0; transform:translate(-50%, 4px);}
-    15%{opacity:1;}
-    100%{opacity:0; transform:translate(-50%, -28px);}
-  }
-  @keyframes floatUpCrit{
-    0%{opacity:0; transform:translate(-50%, 4px) scale(.7);}
-    15%{opacity:1; transform:translate(-50%, 0) scale(1.25);}
-    30%{transform:translate(-50%, -4px) scale(1);}
-    100%{opacity:0; transform:translate(-50%, -34px) scale(1);}
-  }
-
-  .job-btn{
-    position:relative;overflow:hidden;
-    width:100%;padding:16px 12px;
-    background:linear-gradient(135deg,var(--gold-bright),var(--gold));
-    border:none;border-radius:10px;
-    color:#1a1305;font-weight:800;font-size:14px;
-    cursor:pointer;transition:transform .08s ease, filter .15s ease;
-    letter-spacing:.01em;
-  }
-  .job-btn:active:not(:disabled){transform:scale(.97);}
-  .job-btn:disabled{cursor:not-allowed;filter:grayscale(.35) brightness(.75);}
-  .job-btn .job-btn-label{position:relative;z-index:1;}
-  .job-btn .cooldown-fill{
-    position:absolute;left:0;top:0;bottom:0;width:0%;
-    background:rgba(0,0,0,.3);
-    pointer-events:none;
-  }
-
-  .job-earned{
-    margin-top:10px;text-align:center;
-    font-size:12px;color:var(--cream-dim);
-  }
-
-  .job-level-badge{
-    display:inline-block;margin-left:6px;padding:2px 9px;
-    border-radius:10px;font-size:11px;font-weight:800;
-    background:rgba(201,162,39,.18);color:var(--gold-bright);
-    vertical-align:middle;
-  }
-  .job-stats{
-    margin-top:12px;padding:10px 12px;
-    background:var(--ink-900);border:1px solid var(--line);border-radius:8px;
-    font-size:11px;color:var(--cream-dim);line-height:1.8;
-  }
-  .job-stats b{color:var(--cream);}
-  .job-stats .crit-line{color:var(--gold-bright);}
-  .job-upgrade-btn{
-    width:100%;margin-top:10px;padding:11px 12px;
-    background:linear-gradient(135deg,var(--gold-bright),var(--gold));
-    border:none;border-radius:8px;
-    color:#1a1305;font-weight:800;font-size:13px;
-    cursor:pointer;transition:filter .15s ease, transform .08s ease;
-  }
-  .job-upgrade-btn:hover:not(:disabled){filter:brightness(1.08);}
-  .job-upgrade-btn:active:not(:disabled){transform:scale(.97);}
-  .job-upgrade-btn:disabled{
-    background:var(--ink-900);color:var(--cream-dim);
-    border:1px solid var(--line);cursor:not-allowed;
-  }
-  .lb-row{
-    display:flex;align-items:center;gap:10px;
-    padding:9px 6px;border-radius:6px;
-    font-size:13px;
-  }
-  .lb-row.me{background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.4);}
-  .lb-rank{
-    width:22px;text-align:center;font-family:'JetBrains Mono',monospace;
-    font-weight:700;color:var(--cream-dim);font-size:12px;
-  }
-  .lb-row:nth-child(1) .lb-rank{color:#e6c34f;}
-  .lb-row:nth-child(2) .lb-rank{color:#c9c9c9;}
-  .lb-row:nth-child(3) .lb-rank{color:#c9834a;}
-  .lb-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  
-  .lb-val{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--gold-bright);}
-  .lb-empty{color:var(--cream-dim);font-size:12px;padding:8px 6px;}
-  .lb-status{font-size:10.5px;color:var(--cream-dim);margin-top:10px;text-align:right;}
-
-  /* ===== Event banner ===== */
-  #eventBanner{
-    position:fixed;left:50%;top:16px;
-    transform:translate(-50%,-140%);
-    z-index:200;
-    background:linear-gradient(135deg,#1a3327,#0d1c16);
-    border:1px solid var(--gold);
-    box-shadow:var(--shadow), 0 0 30px rgba(201,162,39,.35);
-    border-radius:10px;
-    padding:14px 22px;
-    max-width:92vw;
-    display:flex;align-items:center;gap:14px;
-    transition:transform .45s cubic-bezier(.2,.9,.2,1.2);
-  }
-  #eventBanner.show{transform:translate(-50%,0);}
-  #eventBanner .tag{
-    font-family:'Gowun Batang',serif;color:var(--gold-bright);
-    font-size:13px;letter-spacing:.14em;
-  }
-  #eventBanner .msg{font-size:14px;color:var(--cream);}
-
-  /* ===== Modals & Overlays ===== */
-  .full-overlay{
-    position:fixed;inset:0;background:rgba(4,10,7,.86);
-    display:flex;align-items:center;justify-content:center;
-    z-index:300;backdrop-filter:blur(3px);
-  }
-  #maintenanceOverlay{ z-index:400; }
-
-  /* ===== Guide & Action Buttons ===== */
-  .guide-fab{
-    position:fixed;right:22px;bottom:22px;
-    width:46px;height:46px;border-radius:50%;
-    background:var(--gold);color:#1a1305;
-    border:none;font-family:'Gowun Batang',serif;font-size:22px;font-weight:700;
-    cursor:pointer;box-shadow:var(--shadow);
-    z-index:350;
-    display:flex;align-items:center;justify-content:center;
-    transition:transform .15s ease, filter .15s ease;
-  }
-  .guide-fab:hover{transform:scale(1.08);filter:brightness(1.08);}
-
-  .patch-fab{
-    position:fixed;right:22px;bottom:78px;
-    width:46px;height:46px;border-radius:50%;
-    background:var(--ink-700);color:var(--gold-bright);
-    border:1px solid var(--gold);font-size:19px;font-weight:700;
-    cursor:pointer;box-shadow:var(--shadow);
-    z-index:350;
-    display:flex;align-items:center;justify-content:center;
-    transition:transform .15s ease, filter .15s ease;
-  }
-  .patch-fab:hover{transform:scale(1.08);filter:brightness(1.15);}
-
-  .donate-fab{
-    position:fixed;right:22px;bottom:134px;
-    width:46px;height:46px;border-radius:50%;
-    background:linear-gradient(135deg,var(--gold-bright),var(--gold));
-    color:#1a1305;
-    border:none;font-size:20px;font-weight:700;
-    cursor:pointer;box-shadow:var(--shadow);
-    z-index:350;
-    display:flex;align-items:center;justify-content:center;
-    transition:transform .15s ease, filter .15s ease;
-  }
-  .donate-fab:hover{transform:scale(1.08);filter:brightness(1.1);}
-  
-  .donate-account-box{
-    margin:16px 0;padding:16px;
-    background:var(--ink-900);border:1px solid var(--gold);border-radius:10px;
-    text-align:center;
-  }
-  .donate-bank{font-size:12px;color:var(--cream-dim);margin-bottom:4px;}
-  .donate-number{
-    font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:800;
-    color:var(--gold-bright);letter-spacing:.03em;
-  }
-  .donate-copy-btn{
-    width:100%;padding:11px;border:none;border-radius:8px;
-    background:var(--gold);color:#1a1305;font-weight:800;font-size:13px;
-    cursor:pointer;margin-top:10px;
-  }
-  .donate-copy-btn:hover{filter:brightness(1.08);}
-
-  #patchModal{ z-index:360; align-items:flex-start; padding:40px 16px; overflow-y:auto; }
-  .patch-entry{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);}
-  .patch-entry:first-of-type{margin-top:16px;padding-top:0;border-top:none;}
-  .patch-entry .patch-date{
-    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold-bright);
-    letter-spacing:.05em;margin-bottom:4px;
-  }
-  .patch-entry ul{margin:6px 0 0;padding-left:18px;}
-  .patch-entry li{font-size:12.5px;color:var(--cream-dim);line-height:1.7;margin-bottom:3px;}
-  .patch-entry li b{color:var(--cream);}
-
-  #guideModal{ z-index:360; align-items:flex-start; padding:40px 16px; overflow-y:auto; }
-  .guide-card{
-    background:linear-gradient(180deg,var(--ink-700),var(--ink-800));
-    border:1px solid var(--gold);
-    border-radius:14px;
-    padding:32px 30px;
-    width:min(600px,92vw);
-    box-shadow:var(--shadow);
-    position:relative;
-    margin:auto;
-  }
-  .guide-card h2{font-family:'Gowun Batang',serif;font-size:25px;margin:8px 0 4px;color:var(--cream);}
-  .guide-close{
-    position:absolute;top:16px;right:16px;
-    width:30px;height:30px;border-radius:50%;
-    background:var(--ink-900);border:1px solid var(--line);
-    color:var(--cream-dim);font-size:15px;line-height:1;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .guide-close:hover{color:var(--cream);border-color:var(--gold);}
-  .guide-section{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);}
-  .guide-section:first-of-type{border-top:none;margin-top:20px;padding-top:0;}
-  .guide-section h3{
-    font-size:14.5px;color:var(--gold-bright);margin:0 0 8px;
-    display:flex;align-items:center;gap:8px;
-  }
-  .guide-section p{font-size:13px;color:var(--cream-dim);line-height:1.7;margin:0 0 8px;}
-  .guide-section ul{margin:0 0 4px;padding-left:18px;}
-  .guide-section li{font-size:13px;color:var(--cream-dim);line-height:1.7;margin-bottom:4px;}
-  .guide-section b{color:var(--cream);}
-  
-  .modal-card{
-    background:linear-gradient(180deg,var(--ink-700),var(--ink-800));
-    border:1px solid var(--gold);
-    border-radius:14px;
-    padding:38px 34px;
-    width:min(400px,88vw);
-    text-align:center;
-    box-shadow:var(--shadow);
-  }
-  .modal-card .eyebrow{color:var(--gold);font-size:11px;letter-spacing:.3em;text-transform:uppercase;}
-  .modal-card h2{font-family:'Gowun Batang',serif;font-size:26px;margin:8px 0 4px;}
-  .modal-card p{color:var(--cream-dim);font-size:13px;margin:0 0 22px;}
-  .modal-card input{
-    width:100%;padding:12px 14px;background:var(--ink-900);
-    border:1px solid var(--line);border-radius:8px;
-    color:var(--cream);font-size:15px;text-align:center;
-    margin-bottom:14px;
-  }
-  .modal-card input:focus{outline:1px solid var(--gold);}
-  .modal-card button{
-    width:100%;padding:13px;border:none;border-radius:8px;
-    background:var(--gold);color:#1a1305;font-weight:700;font-size:14px;
-    cursor:pointer;letter-spacing:.03em;
-  }
-  .modal-card button:hover{filter:brightness(1.08);}
-  .modal-card .starting{
-    margin-top:16px;font-family:'JetBrains Mono',monospace;
-    font-size:12px;color:var(--cream-dim);
-  }
-  .modal-card .modal-error{
-    min-height:16px;
-    font-size:12px;color:var(--down);
-    margin:-8px 0 12px;
-  }
-  .modal-card button:disabled{opacity:.5;cursor:not-allowed;}
-
-  footer{
-    text-align:center;color:var(--cream-dim);
-    font-size:11px;padding:20px;letter-spacing:.05em;
-  }
-</style>
-</head>
-<body>
-
-<div id="nameModal" class="full-overlay">
-  <div class="modal-card">
-    <div class="eyebrow">Hawaii Exchange</div>
-    <h2>해화이거래소 입장</h2>
-    <p>이름과 비밀번호를 입력하세요. 처음이면 자동으로 계정이 생성되고, 이미 있는 이름이면 비밀번호로 이어서 할 수 있어요</p>
-    <input id="nameInput" maxlength="10" placeholder="닉네임 (최대 10자)" autocomplete="off">
-    <input id="passwordInput" type="password" maxlength="20" placeholder="비밀번호" autocomplete="off">
-    <div class="modal-error" id="nameError"></div>
-    <button id="startBtn">입장하기</button>
-    <div class="starting">기초 자금 100,000원 지급</div>
-  </div>
-</div>
-
-<div id="maintenanceOverlay" class="full-overlay" style="display:none;">
-  <div class="modal-card">
-    <div class="eyebrow">Hawaii Exchange</div>
-    <h2>⚙️ 서버 점검 중</h2>
-    <p id="maintenanceMsg">서버 점검 중입니다. 잠시 후 다시 접속해주세요.</p>
-  </div>
-</div>
-
-<div id="eventBanner">
-  <div class="tag">해화이 속보</div>
-  <div class="msg" id="eventMsg"></div>
-</div>
-
-<div class="ticker-wrap">
-  <div class="ticker-track" id="tickerTrack"></div>
-</div>
-
-<header>
-  <div>
-    <p class="brand-eyebrow">Hawaii Exchange · Est. 2026</p>
-    <h1>해화이<span>거래소</span></h1>
-  </div>
-  <div class="wallet">
-    <div class="label">평가 자산</div>
-    <div class="value mono" id="totalValue">₩0</div>
-    <div class="sub mono" id="cashValue">현금 ₩0</div>
-    <div class="sub mono" id="overallReturn"></div>
-  </div>
-</header>
-
-<div class="layout">
-  <div>
-    <h3 class="board-title">시세판</h3>
-    <p class="board-sub">카드 우측 상단에서 <b>롱</b>(오를 것 같으면 매수/매도) / <b>숏</b>(내릴 것 같으면 숏/커버)을 골라 거래하세요</p>
-    <div class="grid-items" id="itemsGrid"></div>
-  </div>
-
-  <div>
-    <div class="board job-board">
-      <h3 class="board-title" style="margin-bottom:10px;">알바 <span class="job-level-badge" id="jobLevelBadge">Lv.1</span></h3>
-      <p class="board-sub" style="margin-bottom:10px;" id="jobDesc">시세가 안 움직일 땐 버튼을 눌러 소소하게 벌어보세요</p>
-      <div class="job-toast-wrap" id="jobToastWrap"></div>
-      <button id="jobBtn" class="job-btn">
-        <span class="cooldown-fill" id="jobCooldownFill"></span>
-        <span class="job-btn-label">💼 알바하기</span>
-      </button>
-      <div class="job-earned mono" id="jobEarnedTotal">알바 수익 ₩0</div>
-
-      <div class="job-stats mono" id="jobStats"></div>
-      <button id="jobUpgradeBtn" class="job-upgrade-btn">업그레이드</button>
-    </div>
-
-    <div class="board bankruptcy-board">
-      <h3 class="board-title" style="margin-bottom:10px;">파산 신청</h3>
-      <p class="board-sub" style="margin-bottom:14px;">평가 자산이 마이너스가 되면 신청할 수 있어요. 신청하면 모든 포지션이 정리되고 50,000원으로 다시 시작해요. (재신청은 <b>5분</b> 쿨타임)</p>
-      <button id="bankruptcyBtn" class="bankruptcy-btn" disabled>파산 신청하기</button>
-    </div>
-
-    <div class="board fund-board">
-      <h3 class="board-title" style="margin-bottom:10px;">헤지펀드</h3>
-      <p class="board-sub" style="margin-bottom:10px;">원하는 펀드에 원하는 금액을 넣으면 <b>5분 뒤</b> 수익률에 따라 정산돼요.</p>
-      <select id="fundSelect" class="fund-select">
-        <option value="seongjun">김성준 펀드</option>
-        <option value="harang">이하랑 펀드</option>
-        <option value="dohun">김도훈 펀드</option>
-        <option value="haehoan">정해환 펀드</option>
-        <option value="changho">윤창호 펀드</option>
-      </select>
-      <input type="number" id="fundAmount" class="fund-amount" placeholder="투자 금액 (최소 1,000원)" min="1000" step="1000">
-      <button id="fundInvestBtn" class="fund-invest-btn">투자하기</button>
-      <div id="fundActiveList" class="fund-active-list"><div class="fund-empty">진행 중인 투자가 없어요</div></div>
-    </div>
-
-    <div class="board lottery-board">
-      <h3 class="board-title" style="margin-bottom:10px;">복권</h3>
-      <p class="board-sub" style="margin-bottom:10px;">1등 상금은 구매가의 <b>500배</b>! 확률은 진짜 복권처럼 극악이에요.</p>
-      <select id="lotteryPriceSelect" class="fund-select">
-        <option value="10000">10,000원권</option>
-        <option value="100000">100,000원권</option>
-        <option value="1000000">1,000,000원권</option>
-        <option value="10000000">10,000,000원권</option>
-        <option value="100000000">100,000,000원권</option>
-      </select>
-      <button id="lotteryBuyBtn" class="lottery-buy-btn">복권 구매하기</button>
-    </div>
-
-    <div class="board">
-      <h3 class="board-title" style="margin-bottom:14px;">실시간 순위</h3>
-      <div id="leaderboardList"><div class="lb-empty">불러오는 중...</div></div>
-      <div class="lb-status" id="lbStatus">연결 대기 중</div>
-    </div>
-  </div>
-</div>
-
-<div id="bankruptcyModal" class="full-overlay" style="display:none;">
-  <div class="modal-card">
-    <div class="eyebrow">Hawaii Exchange</div>
-    <h2>💥 파산 신청</h2>
-    <p>보유·숏 포지션이 모두 정리되고, <b>진행 중인 펀드 투자도 몰수</b>되며, 자금이 <b>50,000원</b>으로 초기화돼요. 정말 신청할까요?</p>
-    <button id="bankruptcyConfirmBtn" class="danger">신청하기</button>
-    <button id="bankruptcyCancelBtn" class="secondary">취소</button>
-  </div>
-</div>
-
-<div id="lotteryScratchModal" class="full-overlay" style="display:none;">
-  <div class="modal-card lottery-modal-card">
-    <div class="eyebrow">Hawaii Exchange</div>
-    <h2>🎫 복권 긁기</h2>
-    <p class="lottery-modal-desc">마우스나 손가락으로 문질러서 긁어보세요! (80% 이상 지우면 자동 공개)</p>
-    <canvas id="scratchCanvas" width="300" height="150" class="scratch-canvas"></canvas>
-    <button id="scratchAllBtn" class="secondary">다 긁기</button>
-    <div id="lotteryModalResult" class="lottery-modal-result"></div>
-    <button id="lotteryModalCloseBtn" class="danger" style="display:none;">닫기</button>
-  </div>
-</div>
-
-<button id="patchNotesBtn" class="patch-fab" aria-label="패치노트 보기" title="패치노트">📋</button>
-<button id="guideBtn" class="guide-fab" aria-label="가이드 보기" title="가이드 보기">ⓘ</button>
-<button id="donateBtn" class="donate-fab" aria-label="후원하기" title="후원하기">💛</button>
-
-<div id="donateModal" class="full-overlay" style="display:none;">
-  <div class="modal-card">
-    <div class="eyebrow">Hawaii Exchange</div>
-    <h2>💛 후원하기</h2>
-    <p style="font-size:12.5px;color:var(--cream-dim);margin:0;">재밌었다면, 개발자에게 커피 한 잔 후원해주셔도 좋아요! (물론 안 하셔도 전혀 상관없어요 🙂)</p>
-    <div class="donate-account-box">
-      <div class="donate-bank">농협(김성준)</div>
-      <div class="donate-number" id="donateAccountNumber">302-1532-7426-91</div>
-      <div style="margin-top:6px; font-size:13px; color:var(--gold-bright); font-weight:700;">(김성준)</div>
-    </div>
-    <button class="donate-copy-btn" id="donateCopyBtn">계좌번호 복사하기</button>
-    <button id="donateCloseBtn" class="secondary">닫기</button>
-  </div>
-</div>
-
-<div id="patchModal" class="full-overlay" style="display:none;">
-  <div class="guide-card">
-    <button class="guide-close" id="patchClose" aria-label="닫기">✕</button>
-    <div class="eyebrow">Hawaii Exchange</div>
-    <h2>패치노트</h2>
-    <p style="font-size:13px;color:var(--cream-dim);margin:0;">해화이거래소가 업데이트된 내역이에요.</p>
-
-    <div class="patch-entry">
-      <div class="patch-date">2026-07-18 <span class="patch-tag">NEW</span></div>
-      <ul>
-        <li>🌴 <b>해화이거래소 최초 출시</b> — 실시간 가격 시뮬레이터</li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-<div id="guideModal" class="full-overlay" style="display:none;">
-  <div class="guide-card">
-    <button class="guide-close" id="guideClose" aria-label="닫기">✕</button>
-    <div class="eyebrow">Hawaii Exchange</div>
-    <h2>해화이거래소 가이드</h2>
-    <p style="font-size:13px;color:var(--cream-dim);margin:0;">친구들의 전용 종목 시세를 예측해 자산을 증식하는 모의 시뮬레이터입니다.</p>
-
-    <div class="guide-section">
-      <h3>📈 실시간 시세판 및 포지션 거래</h3>
-      <p>종목 시세는 <b>3초마다</b> 연동되어 변동합니다. 우측 상단의 탭 전환을 통해 포지션을 설정할 수 있습니다.</p>
-      <ul>
-        <li><b>롱(Long)</b>: 가격 상승이 기대될 때 <b>매수</b>하고 매도하여 청산합니다. 레버리지(1x, 2x, 3x) 설정이 가능합니다.</li>
-        <li><b>숏(Short)</b>: 가격 하락이 기대될 때 <b>숏</b> 진입을 하고 커버(Cover)하여 청산합니다.</li>
-        <li>🚨 가끔 무작위로 발생하는 대형 호재 및 악재 <b>해화이 속보</b>를 항상 주시하세요!</li>
-      </ul>
-    </div>
-    <div class="guide-section">
-      <h3>💼 알바하기 & 고속 버프</h3>
-      <p>현금이 일시적으로 부족할 때 클릭하여 고정 급여를 획득할 수 있습니다. 레벨이 오를수록 기본 급여 범위와 크리티컬 확률이 상승하며, <b>최고 레벨(Lv.10)</b>에 도달하면 대기 시간이 <b>0.23초</b>로 대폭 감소하는 초고속 연타 버프가 상시 적용됩니다.</p>
-    </div>
-    <div class="guide-section">
-      <h3>💥 마이너스 자산과 파산 신청</h3>
-      <p>레버리지 거래나 투자 실패로 인해 평가 자산이 <b>마이너스</b> 상태로 전환되면 하단의 파산 신청 버튼이 활성화됩니다. 신청 시 모든 포지션 및 헤지펀드가 강제 청산되며, 자산이 즉시 <b>50,000원</b>으로 복구 및 초기화됩니다. (재신청 쿨타임 5분)</p>
-    </div>
-    <div class="guide-section">
-      <h3>🏦 헤지펀드 및 🎫 즉석 복권</h3>
-      <ul>
-        <li><b>헤지펀드</b>: 최소 1,000원부터 운용 역량이 다른 고유 펀드에 위탁할 수 있으며, 정확히 <b>5분 뒤</b>에 변동된 수익률 결과로 정산 입금됩니다.</li>
-        <li><b>복권</b>: 권종별 금액을 선택해 구매한 뒤, 실시간 캔버스를 마우스나 터치로 직접 긁어 결과를 확인합니다. 1등 당첨 시 구매 금액의 <b>500배</b> 보상을 얻습니다.</li>
-      </ul>
-    </div>
-  </div>
-</div>
-
-<footer>해화이 가격은 실시간으로 변동합니다 · 모든 거래는 시뮬레이션입니다 · <span id="buildVersion"></span></footer>
-
-<script>
-/* ========================= 설정 ========================= */
-const APPS_SCRIPT_URL = ""; 
-const BUILD_VERSION = "v2026-07-18-Hawaii";
-document.getElementById("buildVersion").textContent = "build " + BUILD_VERSION;
-
-const TICK_MS = 3000;          
-const EVENT_PROB = 0.15;       
-const EPOCH = Date.UTC(2026, 6, 18, 0, 0, 0); 
-const STARTING_CASH = 100000;
-const LB_POLL_MS = 5000;       
-const HISTORY_LEN = 30;
-
-const JOB_MAX_LEVEL = 10;
-const JOB_BASE_COOLDOWN_MS = 1200; 
-const JOB_BASE_MIN_EARN = 150;     
-const JOB_BASE_MAX_EARN = 300;
-const JOB_EARN_GROWTH = 0.15;      
-const JOB_CRIT_PER_LEVEL = 0.025;   
-const JOB_CRIT_MAX_CHANCE = 0.25;  
-const JOB_CRIT_MULTIPLIER = 2;     
-const JOB_UPGRADE_BASE_COST = 5000; 
-const JOB_UPGRADE_GROWTH = 1.8;    
-
-function jobCooldownMs(){
-  if(player.jobLevel >= JOB_MAX_LEVEL) return 230;
-  return Math.max(230, Math.round(JOB_BASE_COOLDOWN_MS * Math.pow(0.832, player.jobLevel - 1)));
-}
-function jobEarnRange(){
-  const mult = 1 + JOB_EARN_GROWTH * (player.jobLevel - 1);
-  return { min: Math.round(JOB_BASE_MIN_EARN * mult), max: Math.round(JOB_BASE_MAX_EARN * mult) };
-}
-function jobCritChance(){
-  return Math.min(JOB_CRIT_MAX_CHANCE, JOB_CRIT_PER_LEVEL * (player.jobLevel - 1));
-}
-function jobUpgradeCost(){
-  if(player.jobLevel >= JOB_MAX_LEVEL) return null;
-  return Math.round(JOB_UPGRADE_BASE_COST * Math.pow(JOB_UPGRADE_GROWTH, player.jobLevel - 1));
-}
-
-const MAINTENANCE_POLL_MS = 4000; 
-const BANKRUPTCY_CASH = 50000; 
-const BANKRUPTCY_COOLDOWN_MS = 300000; 
-let lastBankruptcyAt = 0;
-
-const ITEM_DEFS = [
-  { id:"seongjun", name:"김성준의 체대입시 주식회사", emoji:"🏃", price:15000, vol:0.035 },
-  { id:"harang",   name:"이하랑의 강화중독 주식회사", emoji:"💎", price:12000, vol:0.045 },
-  { id:"dohun",    name:"김도훈의 벌크업 주식회사",   emoji:"🏋️", price:10000, vol:0.030 },
-  { id:"haehoan",  name:"정해환의 교회가자 주식회사", emoji:"⛪", price:9000,  vol:0.025 },
-  { id:"changho",  name:"윤창호의 축구교실 주식회사", emoji:"⚽", price:11000, vol:0.040 }
-];
-
-const FUND_DURATION_MS = 300000; 
-const FUND_MIN_INVEST = 1000;
-const FUND_DEFS = [
-  { id:"seongjun", name:"김성준 펀드", min:-0.10, max:0.18 },
-  { id:"harang",   name:"이하랑 펀드", min:-0.25, max:0.40 },
-  { id:"dohun",    name:"김도훈 펀드", min:-0.05, max:0.12 },
-  { id:"haehoan",  name:"정해환 펀드", min:-0.02, max:0.08 },
-  { id:"changho",  name:"윤창호 펀드", min:-0.15, max:0.25 }
-];
-
-const EVENT_TEMPLATES = [
-  { type:"surge", text:n => `🔥 대호재! ${n}의 시장 점유율 폭발적 급등!`, min:1.15, max:1.30 },
-  { type:"surge", text:n => `🚀 기관 투자자 대규모 매수세에 ${n} 상한가 돌파!`, min:1.10, max:1.25 },
-  { type:"crash", text:n => `📉 악재 발생! ${n}의 내부 리스크 보도로 투자 심리 위축`, min:0.80, max:0.92 },
-  { type:"crash", text:n => `⚠️ 시장 경쟁 심화로 인한 ${n} 수익성 악화 우려`, min:0.85, max:0.95 }
-];
-
-/* ========================= 상태 ========================= */
-let player = { name:"", password:"", cash:STARTING_CASH, holdings:{}, jobLevel:1, marginDebt:{}, avgCost:{}, fundInvestments:[], shortProceeds:{} };
-let cardMode = {}; 
-let jobEarnedTotal = 0;
-let lastJobClickAt = 0; 
-let inMaintenance = false;
-let items = ITEM_DEFS.map(d => ({
-  ...d,
-  basePrice:d.price,   
-  anchorPrice:d.price, 
-  prevPrice:d.price,
-  history:[d.price],
-  floor: Math.max(200, Math.round(d.price * 0.10)),
-  ceiling: Math.round(d.price * 8),
-  sidecarUntilTick: 0,   
-  delistedUntilTick: 0  
-}));
-let sparkCtxCache = {};
-
-/* ========================= 유틸 ========================= */
-const won = n => (n < 0 ? "-" : "") + "₩" + Math.round(Math.abs(n)).toLocaleString("ko-KR");
-const clampPrice = (p, it) => Math.min(it.ceiling, Math.max(it.floor, Math.round(p)));
-
-function totalPortfolio(){
-  let v = player.cash;
-  for(const it of items){ v += (player.holdings[it.id]||0) * it.price; }
-  for(const id in player.shortProceeds) v += player.shortProceeds[id] || 0;
-  for(const id in player.marginDebt) v -= player.marginDebt[id] || 0;
-  return v;
-}
-
-function hashSeed(str){
-  let h = 2166136261;
-  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
-function mulberry32(seed){
-  return function(){
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-function randAt(key){ return mulberry32(hashSeed(key))(); }
-function currentTickIndex(){ return Math.floor((Date.now() - EPOCH) / TICK_MS); }
-
-/* ========================= 시뮬레이터 로직 ========================= */
-let simTick = -1;
-
-function processTick(tick, silent){
-  const eventRoll = randAt('event|roll|'+tick);
-  let eventItemIds = [];
-  let tmpl = null;
-
-  if(eventRoll < EVENT_PROB){
-    const n = randAt('event|n|'+tick) < 0.35 ? 2 : 1;
-    const scored = items.map(it => ({ id: it.id, score: randAt(it.id+'|event|pick|'+tick) }));
-    scored.sort((a,b) => a.score - b.score);
-    eventItemIds = scored.slice(0, n).map(s => s.id);
-    const tmplIdx = Math.floor(randAt('event|tmpl|'+tick) * EVENT_TEMPLATES.length);
-    tmpl = EVENT_TEMPLATES[Math.min(tmplIdx, EVENT_TEMPLATES.length-1)];
-  }
-
-  const marketRand = randAt('factor|market|'+tick);
-
-  for(const it of items){
-    it.prevPrice = it.price;
-
-    if(it.delistedUntilTick && tick < it.delistedUntilTick){
-      it.price = it.floor; it.basePrice = it.floor; it.history.push(it.price);
-      if(it.history.length > HISTORY_LEN) it.history.shift();
-      continue;
-    }
-    if(it.delistedUntilTick && tick >= it.delistedUntilTick){
-      it.delistedUntilTick = 0; it.basePrice = it.anchorPrice; it.price = it.basePrice;
-      it.history = [it.price]; continue;
-    }
-
-    let nextBase;
-    if(eventItemIds.includes(it.id)){
-      const factor = tmpl.min + randAt(it.id+'|event|factor|'+tick) * (tmpl.max - tmpl.min);
-      nextBase = clampPrice(it.basePrice * factor, it);
-      it._eventFlash = tmpl.type;
-    } else {
-      const idioRand = randAt(it.id+'|drift|'+tick);
-      const marketShock = (marketRand*2 - 1) * it.vol * 0.5;
-      const idioShock = (idioRand*2 - 1) * it.vol * 0.5;
-      const logRatio = Math.log(it.basePrice / it.anchorPrice);
-      const reversionShock = -0.3 * logRatio * it.vol; 
-      const delta = marketShock + idioShock + reversionShock;
-      nextBase = clampPrice(it.basePrice * (1 + delta), it);
-    }
-
-    if(nextBase <= it.floor){
-      nextBase = it.anchorPrice; 
-    }
-
-    it.basePrice = nextBase;
-    it.price = it.basePrice;
-
-    const anchorRand = randAt(it.id+'|anchorDrift|'+tick);
-    it.anchorPrice = clampPrice(it.anchorPrice * (1 + (anchorRand*2 - 1) * it.vol * 0.1), it);
-
-    it.history.push(it.price);
-    if(it.history.length > HISTORY_LEN) it.history.shift();
-  }
-
-  simTick = tick;
-
-  if(!silent && eventItemIds.length){
-    const names = eventItemIds.map(id => items.find(i=>i.id===id).name).join(", ");
-    showEventBanner(tmpl.text(names));
-    setTimeout(()=>{
-      for(const id of eventItemIds){ const it = items.find(i=>i.id===id); if(it) it._eventFlash = null; }
-    }, 1200);
-  }
-}
-
-function catchUpTo(targetTick, silent){
-  while(simTick < targetTick){ processTick(simTick + 1, silent); }
-}
-
-function refreshPrices(){
-  const target = currentTickIndex();
-  if(target > simTick){ catchUpTo(target, false); }
-  checkFundSettlement();
-  renderItems();
-  renderWallet();
-}
-
-function scheduleTicking(){
-  const msUntilNextTick = TICK_MS - (((Date.now() - EPOCH) % TICK_MS + TICK_MS) % TICK_MS);
-  setTimeout(()=>{
-    refreshPrices();
-    setInterval(refreshPrices, TICK_MS);
-  }, msUntilNextTick + 30);
-}
-
-function showEventBanner(msg){
-  const el = document.getElementById("eventBanner");
-  document.getElementById("eventMsg").textContent = msg;
-  el.classList.add("show");
-  clearTimeout(showEventBanner._t);
-  showEventBanner._t = setTimeout(()=>el.classList.remove("show"), 4200);
-}
-
-/* ========================= 거래 엔진 ========================= */
-const TRADE_FEE_RATE = 0.005;
-
-function buy(id, qty, leverage){
   const it = items.find(i=>i.id===id);
-  if(!it || qty <= 0) return;
-  
-  const cost = it.price * qty;
-  const marginRequired = cost / leverage;
-  const fee = marginRequired * TRADE_FEE_RATE;
-  
-  if(player.cash < marginRequired + fee){
-    showEventBanner("❌ 자산이 부족합니다.");
+  if(!it) return;
+  if(isSidecarActive(it)) return rejectSidecar(id);
+  if(isDelisted(it)) return rejectDelisted(id);
+
+  const have = player.holdings[id] || 0;
+  if(have < 0){
+    // 숏 보유 중이면 자동으로 커버 먼저 진행
+    const coverQty = Math.min(qty, -have);
+    cover(id, coverQty);
+    const rem = qty - coverQty;
+    if(rem > 0) setTimeout(() => buy(id, rem, leverage), 50); 
     return;
   }
-  
-  player.cash -= (marginRequired + fee);
-  const currentQty = player.holdings[id] || 0;
-  if(currentQty < 0) {
-    showEventBanner("⚠️ 숏 포지션 보유 중에는 롱 포지션을 동시 보유할 수 없습니다. 커버를 먼저 진행하세요.");
-    player.cash += (marginRequired + fee);
+
+  const price = it.price;
+  const totalPositionValue = price * qty;
+  let feeRate = TRADE_FEE_RATE;
+  if(leverage > 1) feeRate += LEVERAGE_FEE_RATE;
+  if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
+
+  const marginRequired = Math.round(totalPositionValue / leverage);
+  const fee = Math.round(marginRequired * feeRate);
+  const totalCost = marginRequired + fee;
+
+  if(player.cash < totalCost){
+    flashCard(id, "down");
+    showEventBanner("💸 현금이 부족해요");
     return;
   }
+
+  const debt = totalPositionValue - marginRequired;
+  const currentDebt = totalMarginDebtAll();
+  const maxDebt = totalPortfolio() * leverageMarginMultFor(it);
+
+  if(debt > 0 && (currentDebt + debt) > maxDebt){
+    flashCard(id, "down");
+    showEventBanner(`🛑 레버리지 부채 한도 초과! (총자산의 ${leverageMarginMultFor(it)}배까지 가능)`);
+    return;
+  }
+
+  // 매수 실행
+  player.cash -= totalCost;
+  const prevAvgCost = player.avgCost[id] || 0;
   
-  const totalCost = (player.avgCost[id] || 0) * currentQty + cost;
-  player.holdings[id] = currentQty + qty;
-  player.avgCost[id] = totalCost / player.holdings[id];
-  player.marginDebt[id] = (player.marginDebt[id] || 0) + (cost - marginRequired);
+  // 평균 매입가 갱신 (부채 포함된 총 포지션 가치 기준)
+  player.avgCost[id] = ((have * prevAvgCost) + totalPositionValue) / (have + qty);
+  player.holdings[id] = have + qty;
   
-  showEventBanner(`📈 ${it.name} ${qty}주 매수 완료`);
+  if(debt > 0){
+    player.marginDebt[id] = (player.marginDebt[id] || 0) + debt;
+  }
+
+  // 코인은 롱 포지션도 타임어택 존재
+  if(it.sector === "coin"){
+    player.longExpiry[id] = Date.now() + COIN_LONG_MATURITY_MS;
+  }
+
+  markTraded();
+  flashCard(id, "up");
   pushScore();
-  renderWallet();
   renderItems();
+  renderWallet();
 }
 
 function sell(id, qty){
+  if(!canTrade()) return rejectTradeCooldown(id);
+  qty = parseInt(qty, 10);
+  if(isNaN(qty) || qty <= 0) return;
+
   const it = items.find(i=>i.id===id);
+  if(!it) return;
+  if(isSidecarActive(it)) return rejectSidecar(id);
+  if(isDelisted(it)) return rejectDelisted(id);
+
   const have = player.holdings[id] || 0;
-  if(!it || have <= 0 || qty <= 0) return;
+  if(have <= 0) return;
   
-  const sellQty = Math.min(have, qty);
-  const portion = sellQty / have;
-  const debtRepay = (player.marginDebt[id] || 0) * portion;
+  qty = Math.min(qty, have);
   
-  const proceeds = it.price * sellQty;
-  const fee = proceeds * TRADE_FEE_RATE;
+  const price = it.price;
+  const totalValue = price * qty;
+  let feeRate = TRADE_FEE_RATE;
+  if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
   
-  player.cash += (proceeds - debtRepay - fee);
-  player.holdings[id] = have - sellQty;
-  player.marginDebt[id] -= debtRepay;
+  const fee = Math.round(totalValue * feeRate);
+  
+  // 환생 보너스 적용 (1분 쿨타임)
+  const bonusRate = consumeRebirthBonusIfAvailable();
+  const bonusAmount = Math.round(totalValue * bonusRate);
+  
+  // 부채 상환 로직 (일부 매도 시 비율에 맞춰 상환)
+  let debtRepaid = 0;
+  if(player.marginDebt[id] > 0){
+    debtRepaid = Math.round(player.marginDebt[id] * (qty / have));
+    player.marginDebt[id] -= debtRepaid;
+    if(player.marginDebt[id] < 1) delete player.marginDebt[id];
+  }
+
+  const netProceeds = totalValue - fee + bonusAmount - debtRepaid;
+  
+  player.cash += netProceeds;
+  player.holdings[id] -= qty;
   
   if(player.holdings[id] === 0){
+    delete player.holdings[id];
     delete player.avgCost[id];
     delete player.marginDebt[id];
+    delete player.longExpiry[id];
   }
-  
-  showEventBanner(`📉 ${it.name} ${sellQty}주 매도 완료`);
+
+  if(bonusAmount > 0){
+    showEventBanner(`✨ 환생 보너스 적용! 매도액에 ${won(bonusAmount)} 추가 지급`);
+  }
+
+  markTraded();
+  flashCard(id, "down");
   pushScore();
-  renderWallet();
   renderItems();
+  renderWallet();
 }
 
 function short(id, qty){
+  if(!canTrade()) return rejectTradeCooldown(id);
+  qty = parseInt(qty, 10);
+  if(isNaN(qty) || qty <= 0) return;
+
   const it = items.find(i=>i.id===id);
-  if(!it || qty <= 0) return;
-  
-  if((player.holdings[id] || 0) > 0){
-    showEventBanner("⚠️ 이미 롱 포지션을 보유 중입니다.");
-    return;
+  if(!it) return;
+  if(isSidecarActive(it)) return rejectSidecar(id);
+  if(isDelisted(it)) return rejectDelisted(id);
+
+  const have = player.holdings[id] || 0;
+  if(have > 0){
+    // 롱 보유 중이면 매도부터 자동 처리
+    sell(id, Math.min(qty, have));
+    return; // 숏은 다음 틱이나 버튼 재입력 유도 (동시 처리 꼬임 방지)
   }
+
+  const price = it.price;
+  const totalValue = price * qty;
   
-  const val = it.price * qty;
-  const fee = val * 0.01;
+  let feeRate = SHORT_FEE_RATE;
+  if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
+  const fee = Math.round(totalValue * feeRate);
+  
   if(player.cash < fee){
-    showEventBanner("❌ 수수료를 지불할 현금이 부족합니다.");
+    flashCard(id, "down");
+    showEventBanner("💸 수수료를 낼 현금이 부족해요");
     return;
   }
+
+  // 총 숏 노출 한도 검사
+  const currentShortExp = currentShortExposure(id);
+  const maxShortExp = totalPortfolio() * shortMarginMultFor(it);
   
+  if(currentShortExp + totalValue > maxShortExp){
+    flashCard(id, "down");
+    showEventBanner(`🛑 숏 한도 초과! (총자산의 ${shortMarginMultFor(it)}배까지 노출 가능)`);
+    return;
+  }
+
   player.cash -= fee;
-  player.holdings[id] = (player.holdings[id] || 0) - qty;
-  player.shortProceeds[id] = (player.shortProceeds[id] || 0) + val;
   
-  showEventBanner(`🐻 ${it.name} ${qty}주 숏 진입`);
+  // 평균 진입가 갱신
+  const prevShortQty = Math.abs(have);
+  const prevAvgCost = player.avgCost[id] || 0;
+  player.avgCost[id] = ((prevShortQty * prevAvgCost) + totalValue) / (prevShortQty + qty);
+  
+  player.holdings[id] = have - qty;
+  
+  // 매도대금은 현금이 아니라 예치금으로 묶임
+  player.shortProceeds[id] = (player.shortProceeds[id] || 0) + totalValue;
+  
+  // 만기 갱신
+  player.shortExpiry[id] = Date.now() + (it.sector === "coin" ? COIN_SHORT_MATURITY_MS : SHORT_MATURITY_MS);
+
+  markTraded();
+  flashCard(id, "up");
   pushScore();
-  renderWallet();
   renderItems();
+  renderWallet();
 }
 
 function cover(id, qty){
+  if(!canTrade()) return rejectTradeCooldown(id);
+  qty = parseInt(qty, 10);
+  if(isNaN(qty) || qty <= 0) return;
+
   const it = items.find(i=>i.id===id);
+  if(!it) return;
+  if(isSidecarActive(it)) return rejectSidecar(id);
+  if(isDelisted(it)) return rejectDelisted(id);
+
   const have = player.holdings[id] || 0;
-  if(!it || have >= 0 || qty <= 0) return;
+  if(have >= 0) return; // 숏 상태가 아님
   
-  const shortQty = -have;
-  const coverQty = Math.min(shortQty, qty);
-  const portion = coverQty / shortQty;
+  const currentShortQty = Math.abs(have);
+  qty = Math.min(qty, currentShortQty);
   
-  const originalProceeds = (player.shortProceeds[id] || 0) * portion;
-  const currentCost = it.price * coverQty;
-  const profit = originalProceeds - currentCost;
+  const price = it.price;
+  const coverCost = price * qty;
+  let feeRate = TRADE_FEE_RATE;
+  if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
+  const fee = Math.round(coverCost * feeRate);
   
-  player.cash += (profit);
-  player.shortProceeds[id] -= originalProceeds;
-  player.holdings[id] += coverQty;
+  // 예치금 회수 (비율대로)
+  const proceedsRecouped = Math.round((player.shortProceeds[id] || 0) * (qty / currentShortQty));
+  player.shortProceeds[id] -= proceedsRecouped;
+  if(player.shortProceeds[id] < 1) delete player.shortProceeds[id];
+  
+  // 차익 계산 (예치금 - 갚는 비용 - 수수료)
+  const netProfit = proceedsRecouped - coverCost - fee;
+  
+  player.cash += netProfit;
+  player.holdings[id] += qty;
   
   if(player.holdings[id] === 0){
+    delete player.holdings[id];
+    delete player.avgCost[id];
+    delete player.shortExpiry[id];
     delete player.shortProceeds[id];
   }
-  
-  showEventBanner(`💎 ${it.name} ${coverQty}주 커버 완료`);
+
+  markTraded();
+  flashCard(id, "down");
   pushScore();
-  renderWallet();
-  renderItems();
-}
-
-/* ========================= 알바 시스템 ========================= */
-function clickJob(){
-  const now = performance.now();
-  const cd = jobCooldownMs();
-  if(now - lastJobClickAt < cd) return;
-  lastJobClickAt = now;
-
-  const range = jobEarnRange();
-  let earn = Math.floor(range.min + Math.random() * (range.max - range.min + 1));
-  const isCrit = Math.random() < jobCritChance();
-  if(isCrit) earn *= JOB_CRIT_MULTIPLIER;
-
-  player.cash += earn;
-  jobEarnedTotal += earn;
-
-  const wrap = document.getElementById("jobToastWrap");
-  const div = document.createElement("div");
-  div.className = "job-toast" + (isCrit ? " crit" : "");
-  div.textContent = (isCrit ? "💥 CRITICAL! " : "＋") + won(earn);
-  wrap.appendChild(div);
-  setTimeout(()=>div.remove(), 1000);
-
-  document.getElementById("jobEarnedTotal").textContent = `알바 수익 ${won(jobEarnedTotal)}`;
-  renderWallet();
-  updateJobButtonCooldown();
-}
-
-function updateJobButtonCooldown(){
-  const btn = document.getElementById("jobBtn");
-  const fill = document.getElementById("jobCooldownFill");
-  const cd = jobCooldownMs();
-  
-  btn.disabled = true;
-  fill.style.width = "100%";
-  fill.style.transition = "none";
-  
-  requestAnimationFrame(()=>{
-    fill.style.transition = `width ${cd}ms linear`;
-    fill.style.width = "0%";
-  });
-  
-  setTimeout(()=>{ btn.disabled = false; }, cd);
-}
-
-function upgradeJob(){
-  const cost = jobUpgradeCost();
-  if(!cost || player.cash < cost) {
-    showEventBanner("❌ 업그레이드 비용이 부족합니다.");
-    return;
-  }
-  player.cash -= cost;
-  player.jobLevel++;
-  showEventBanner(`🎉 알바 업그레이드 성공! Lv.${player.jobLevel}`);
-  pushScore();
-  renderWallet();
-  renderJobPanel();
-}
-
-/* ========================= 펀드 시스템 ========================= */
-function investFund(){
-  const select = document.getElementById("fundSelect");
-  const amtInput = document.getElementById("fundAmount");
-  const amt = parseInt(amtInput.value);
-  
-  if(isNaN(amt) || amt < FUND_MIN_INVEST){
-    showEventBanner(`❌ 최소 투자 금액은 ${won(FUND_MIN_INVEST)}입니다.`);
-    return;
-  }
-  if(player.cash < amt){
-    showEventBanner("❌ 투자할 현금이 부족합니다.");
-    return;
-  }
-  
-  player.cash -= amt;
-  player.fundInvestments.push({
-    fundId: select.value,
-    amount: amt,
-    investedAt: Date.now()
-  });
-  
-  amtInput.value = "";
-  showEventBanner(`💼 펀드 투자 완료 (5분 뒤 정산)`);
-  pushScore();
-  renderWallet();
-  renderFundList();
-}
-
-function checkFundSettlement(){
-  const now = Date.now();
-  let settledAmount = 0;
-  let hasSettled = false;
-  
-  player.fundInvestments = player.fundInvestments.filter(inv => {
-    if(now - inv.investedAt >= FUND_DURATION_MS){
-      const fund = FUND_DEFS.find(f=>f.id===inv.fundId);
-      const r = fund.min + Math.random() * (fund.max - fund.min);
-      const returnAmt = Math.round(inv.amount * (1 + r));
-      player.cash += returnAmt;
-      settledAmount += returnAmt;
-      hasSettled = true;
-      return false;
-    }
-    return true;
-  });
-  
-  if(hasSettled){
-    showEventBanner(`🔔 펀드 만기 정산! ${won(settledAmount)}이 현금 계좌로 입금되었습니다.`);
-    pushScore();
-    renderWallet();
-    renderFundList();
-  }
-}
-
-/* ========================= 렌더링 엔진 ========================= */
-function renderItems(){
-  const grid = document.getElementById("itemsGrid");
-  grid.innerHTML = "";
-  
-  items.forEach(it => {
-    const have = player.holdings[it.id] || 0;
-    const mode = cardMode[it.id] || 'long';
-    const proceeds = player.shortProceeds[it.id] || 0;
-    
-    let subInfo = "";
-    if(have > 0) {
-      const profitPct = ((it.price - player.avgCost[it.id]) / player.avgCost[it.id] * 100).toFixed(2);
-      subInfo = `<div class="return-line ${profitPct>=0?'up':'down'}">보유: ${have}주 (수익률: ${profitPct}%)</div>`;
-    } else if(have < 0) {
-      const avgShortPrice = proceeds / (-have);
-      const profitPct = ((avgShortPrice - it.price) / avgShortPrice * 100).toFixed(2);
-      subInfo = `<div class="return-line ${profitPct>=0?'up':'down'}">숏: ${-have}주 (수익률: ${profitPct}%)</div>`;
-    }
-    
-    const card = document.createElement("div");
-    card.className = `card ${it._eventFlash ? 'flash-'+it._eventFlash : ''}`;
-    card.innerHTML = `
-      <div class="card-top">
-        <span class="card-name"><span class="card-emoji">${it.emoji}</span>${it.name}</span>
-        <div class="mode-toggle">
-          <button class="mode-btn ${mode==='long'?'active':''}" onclick="setCardMode('${it.id}','long')">롱</button>
-          <button class="mode-btn ${mode==='short'?'active':''}" onclick="setCardMode('${it.id}','short')">숏</button>
-        </div>
-      </div>
-      <div class="card-price mono">${won(it.price)}</div>
-      ${subInfo}
-      <div class="trade-row">
-        <input type="number" id="qty_${it.id}" value="1" min="1">
-        ${mode==='long' ? `
-          <select id="lev_${it.id}" class="lev-select">
-            <option value="1">1x</option>
-            <option value="2">2x</option>
-            <option value="3">3x</option>
-          </select>
-          <button class="btn btn-buy" onclick="execBuy('${it.id}')">매수</button>
-          <button class="btn btn-sell" onclick="execSell('${it.id}')">매도</button>
-        ` : `
-          <button class="btn btn-buy" onclick="execShort('${it.id}')">숏</button>
-          <button class="btn btn-sell" onclick="execCover('${it.id}')">커버</button>
-        `}
-      </div>
-    `;
-    grid.appendChild(card);
-  });
-}
-
-function setCardMode(id, mode){ cardMode[id] = mode; renderItems(); }
-function execBuy(id){ const qty = parseInt(document.getElementById(`qty_${id}`).value); const lev = parseInt(document.getElementById(`lev_${id}`).value); buy(id, qty, lev); }
-function execSell(id){ const qty = parseInt(document.getElementById(`qty_${id}`).value); sell(id, qty); }
-function execShort(id){ const qty = parseInt(document.getElementById(`qty_${id}`).value); short(id, qty); }
-function execCover(id){ const qty = parseInt(document.getElementById(`qty_${id}`).value); cover(id, qty); }
-
-function renderWallet(){
-  const total = totalPortfolio();
-  document.getElementById("totalValue").textContent = won(total);
-  document.getElementById("cashValue").textContent = `현금 ${won(player.cash)}`;
-  
-  const profitPct = ((total - STARTING_CASH) / STARTING_CASH * 100).toFixed(2);
-  const el = document.getElementById("overallReturn");
-  el.textContent = `누적 수익률: ${profitPct}%`;
-  el.className = `sub mono ${profitPct>=0?'up':'down'}`;
-  
-  document.getElementById("bankruptcyBtn").disabled = total >= 0;
-}
-
-function renderJobPanel(){
-  document.getElementById("jobLevelBadge").textContent = `Lv.${player.jobLevel}`;
-  const cost = jobUpgradeCost();
-  const btn = document.getElementById("jobUpgradeBtn");
-  if(cost) {
-    btn.textContent = `업그레이드 (${won(cost)})`;
-    btn.disabled = player.cash < cost;
-  } else {
-    btn.textContent = "최대 레벨 도달";
-    btn.disabled = true;
-  }
-  const range = jobEarnRange();
-  document.getElementById("jobStats").innerHTML = `
-    <div>⏱️ 클릭 대기시간: <b>${(jobCooldownMs()/1000).toFixed(2)}초</b></div>
-    <div>💰 기본 급여 범위: <b>${won(range.min)} ~ ${won(range.max)}</b></div>
-    <div class="crit-line">⚡ 크리티컬 확률: <b>${(jobCritChance()*100).toFixed(1)}%</b></div>
-  `;
-}
-
-function renderFundList(){
-  const list = document.getElementById("fundActiveList");
-  list.innerHTML = "";
-  if(player.fundInvestments.length === 0){
-    list.innerHTML = `<div class="fund-empty">진행 중인 투자가 없어요</div>`;
-    return;
-  }
-  
-  player.fundInvestments.forEach(inv => {
-    const fund = FUND_DEFS.find(f=>f.id===inv.fundId);
-    const remaining = Math.max(0, Math.ceil((FUND_DURATION_MS - (Date.now() - inv.investedAt)) / 1000));
-    const min = Math.floor(remaining / 60);
-    const sec = remaining % 60;
-    
-    const div = document.createElement("div");
-    div.className = "fund-row";
-    div.innerHTML = `
-      <span class="fund-row-name">${fund.name}</span>
-      <span class="fund-row-amount">${won(inv.amount)} 투자 중</span>
-      <span class="fund-row-timer mono">${min}:${sec<10?'0':''}${sec}</span>
-    `;
-    list.appendChild(div);
-  });
-}
-
-/* ========================= 데이터 통신 ========================= */
-function pushScore(){
-  if(!APPS_SCRIPT_URL || !player.name) return;
-  const payload = {
-    action: "update", name: player.name, password: player.password,
-    cash: Math.round(player.cash), holdings: player.holdings,
-    total: Math.round(totalPortfolio()), jobLevel: player.jobLevel,
-    marginDebt: player.marginDebt, shortProceeds: player.shortProceeds
-  };
-  fetch(APPS_SCRIPT_URL, { method:"POST", body:JSON.stringify(payload) }).catch(()=>{});
-}
-
-function pollLeaderboard(){
-  if(!APPS_SCRIPT_URL) {
-    document.getElementById("leaderboardList").innerHTML = `<div class="lb-row me"><span class="lb-name">${player.name || '나'}</span><span class="lb-val">${won(totalPortfolio())}</span></div>`;
-    document.getElementById("lbStatus").textContent = "로컬 세션 가동 중";
-    return;
-  }
-  fetch(`${APPS_SCRIPT_URL}?action=leaderboard`)
-    .then(r=>r.json())
-    .then(data=>{
-      const list = document.getElementById("leaderboardList");
-      list.innerHTML = "";
-      data.forEach((row, idx)=>{
-        const div = document.createElement("div");
-        div.className = `lb-row ${row.name===player.name?'me':''}`;
-        div.innerHTML = `<span class="lb-rank">${idx+1}</span><span class="lb-name">${row.name}</span><span class="lb-val">${won(row.total)}</span>`;
-        list.appendChild(div);
-      });
-      document.getElementById("lbStatus").textContent = "실시간 동기화 완료";
-    }).catch(()=>{ document.getElementById("lbStatus").textContent = "오프라인 모드"; });
-}
-
-/* ========================= 초기화 및 바인딩 ========================= */
-document.getElementById("startBtn").onclick = () => {
-  const name = document.getElementById("nameInput").value.trim();
-  const pass = document.getElementById("passwordInput").value.trim();
-  if(!name || !pass) { document.getElementById("nameError").textContent = "이름과 비밀번호를 채워주세요."; return; }
-  
-  player.name = name;
-  player.password = pass;
-  document.getElementById("nameModal").style.display = "none";
-  
-  const saved = localStorage.getItem(`hawaii_ex_${name}`);
-  if(saved){
-    try { player = JSON.parse(saved); } catch(e){}
-  }
-  
   renderItems();
   renderWallet();
-  renderJobPanel();
-  setInterval(()=>{
-    localStorage.setItem(`hawaii_ex_${player.name}`, JSON.stringify(player));
-  }, 2000);
-};
+}
 
-document.getElementById("jobBtn").onclick = clickJob;
-document.getElementById("jobUpgradeBtn").onclick = upgradeJob;
-document.getElementById("fundInvestBtn").onclick = investFund;
-
-// 다이얼로그 모달 토글 제어 리스너
-document.getElementById("guideBtn").onclick = () => document.getElementById("guideModal").style.display = "flex";
-document.getElementById("guideClose").onclick = () => document.getElementById("guideModal").style.display = "none";
-document.getElementById("patchNotesBtn").onclick = () => document.getElementById("patchModal").style.display = "flex";
-document.getElementById("patchClose").onclick = () => document.getElementById("patchModal").style.display = "none";
-document.getElementById("donateBtn").onclick = () => document.getElementById("donateModal").style.display = "flex";
-document.getElementById("donateCloseBtn").onclick = () => document.getElementById("donateModal").style.display = "none";
-
-// 계좌번호 복사 스크립트 바인딩
-document.getElementById("donateCopyBtn").onclick = () => {
-  navigator.clipboard.writeText("302-1532-7426-91");
-  showEventBanner("📋 농협 계좌번호가 클립보드에 복사되었습니다.");
-};
-
-// 초기동작 서브루틴 가동
-scheduleTicking();
-setInterval(pollLeaderboard, LB_POLL_MS);
-setInterval(renderFundList, 1000);
-
-</script>
-</body>
-</html>
+function flashCard(id, type){
+  const el = document.getElementById("card-"+id);
+  if(el){
+    el.classList.remove("flash-up", "flash-down", "market-locked");
+    void el.offsetWidth; // trigger reflow
+    if(type === "up") el.classList.add("flash-up");
+    if(type === "down") el.classList.add("flash-down");
+    if(type === "sidecar" || type === "delisted" || type === "cooldown") el.classList.add("market-locked");
+  }
+}
