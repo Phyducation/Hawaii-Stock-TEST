@@ -2,393 +2,559 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>모의 투자 시스템</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>해화이 거래소 - 실시간 주식 시뮬레이터</title>
   <style>
-    body { font-family: 'Pretendard', sans-serif; background: #f4f6f8; padding: 20px; }
-    .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .wallet-info { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: #333; }
-    .item-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    button { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    .btn-buy { background: #ff4d4f; color: white; }
-    .btn-sell { background: #1890ff; color: white; }
-    .btn-short { background: #52c41a; color: white; }
-    .btn-cover { background: #faad14; color: white; }
-    /* 깜빡임 애니메이션 효과 */
-    .flash-up { animation: flashRed 0.5s; }
-    .flash-down { animation: flashBlue 0.5s; }
-    @keyframes flashRed { 50% { background-color: #ffe5e5; } }
-    @keyframes flashBlue { 50% { background-color: #e6f7ff; } }
+    :root {
+      --bg: #121212; --bg-card: #1e1e1e; --text: #e0e0e0;
+      --up: #ff4d4d; --down: #4d94ff; --primary: #ffaa00;
+      --border: #333; --btn-hover: #ffbb33;
+    }
+    * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; margin: 0; padding: 0; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 50px; }
+    header { background: #000; padding: 15px; text-align: center; border-bottom: 1px solid var(--border); }
+    header h1 { font-size: 1.5rem; color: var(--primary); }
+    
+    .container { max-width: 800px; margin: 0 auto; padding: 10px; }
+    
+    .panel { background: var(--bg-card); border-radius: 10px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); }
+    .panel h2 { font-size: 1.2rem; margin-bottom: 10px; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+    
+    /* 지갑 & 상태 */
+    .wallet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .stat-box { background: #2a2a2a; padding: 10px; border-radius: 5px; text-align: center; }
+    .stat-box span { display: block; font-size: 0.9rem; color: #aaa; margin-bottom: 5px; }
+    .stat-box strong { font-size: 1.1rem; }
+    
+    /* 버튼 류 */
+    button { background: var(--primary); color: #000; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+    button:active { background: var(--btn-hover); transform: scale(0.98); }
+    button:disabled { background: #555; cursor: not-allowed; }
+    .btn-up { background: var(--up); color: white; }
+    .btn-down { background: var(--down); color: white; }
+    
+    /* 주식 목록 */
+    .stock-card { background: #2a2a2a; border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .stock-header { display: flex; justify-content: space-between; align-items: center; }
+    .stock-name { font-weight: bold; font-size: 1.1rem; }
+    .stock-price { font-size: 1.2rem; font-weight: bold; }
+    .stock-price.up { color: var(--up); }
+    .stock-price.down { color: var(--down); }
+    .stock-controls { display: flex; gap: 5px; align-items: center; }
+    .stock-controls input { width: 60px; padding: 5px; border-radius: 4px; border: 1px solid #444; background: #111; color: white; text-align: center; }
+    
+    /* 알바 */
+    .job-area { display: flex; justify-content: space-between; align-items: center; }
+    .job-info { font-size: 0.95rem; }
+    
+    /* 펀드 */
+    .fund-list { display: flex; flex-direction: column; gap: 10px; }
+    .fund-item { background: #2a2a2a; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+    .fund-item select { padding: 5px; background: #111; color: white; border: 1px solid #444; border-radius: 4px; }
+    
+    /* 리더보드 */
+    .lb-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #333; }
+    .lb-row.me { font-weight: bold; color: var(--primary); background: #333; border-radius: 4px; }
+    
+    /* 모달 & 이벤트 배너 */
+    .banner { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #000; padding: 10px 20px; border-radius: 20px; font-weight: bold; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+    .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+    .modal { background: var(--bg-card); padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; text-align: center; }
+    .modal input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #555; background: #111; color: white; }
+    
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
-  <!-- 지갑 상태창 -->
-  <div class="card" id="walletCard">
-    <div class="wallet-info" id="walletCash">보유 현금: 로딩 중...</div>
-    <div id="walletHoldings"></div>
+<div id="eventBanner" class="banner">이벤트 알림</div>
+
+<!-- 로그인 모달 -->
+<div id="loginModal" class="modal-overlay">
+  <div class="modal">
+    <h2 style="color:var(--primary); margin-bottom:15px;">해화이 거래소 입장</h2>
+    <input type="text" id="nameInput" placeholder="닉네임 (특수문자 제외)">
+    <input type="password" id="passwordInput" placeholder="비밀번호">
+    <div id="loginError" style="color:var(--up); margin-bottom:10px; font-size:0.9rem;"></div>
+    <button id="startBtn" style="width:100%; padding:12px; font-size:1.1rem;">게임 시작</button>
+  </div>
+</div>
+
+<header>
+  <h1>🏝️ 해화이 거래소</h1>
+  <div style="font-size: 0.8rem; color: #888; margin-top: 5px;" id="lbStatus">백엔드 연결 대기중...</div>
+</header>
+
+<div class="container">
+  
+  <!-- 자산 현황 -->
+  <div class="panel">
+    <h2>나의 자산</h2>
+    <div class="wallet-grid">
+      <div class="stat-box"><span>총 자산</span><strong id="ui-total">0원</strong></div>
+      <div class="stat-box"><span>보유 현금</span><strong id="ui-cash">0원</strong></div>
+      <div class="stat-box"><span>주식 평가액</span><strong id="ui-stock">0원</strong></div>
+      <div class="stat-box"><span>환생 횟수 (✨)</span><strong id="ui-rebirth">0번</strong></div>
+    </div>
+    <div style="text-align: center; margin-top: 10px;">
+      <button id="rebirthBtn" style="width: 100%; background: #9932CC; color: white;">✨ 환생하기 (조건: 총 자산 10억원)</button>
+      <div style="font-size:0.8rem; color:#aaa; margin-top:5px;">환생 시 주식 매도 손실률 1% 감소 혜택 (누적)</div>
+    </div>
   </div>
 
-  <!-- 종목 리스트 -->
-  <div class="card" id="marketCard">
-    <h3>주식/코인 시장</h3>
-    <div id="itemsContainer"></div>
+  <!-- 알바 시스템 -->
+  <div class="panel">
+    <h2>알바하기</h2>
+    <div class="job-area">
+      <div class="job-info">
+        <div id="jobTitle" style="font-weight: bold; font-size: 1.1rem;">알바생 (Lv.1)</div>
+        <div id="jobDesc" style="color: #aaa; font-size: 0.9rem;">클릭당 20,000원 / 쿨타임 3초</div>
+      </div>
+      <div>
+        <button id="workBtn" style="padding: 15px 20px;">일하기 💦</button>
+        <button id="jobUpgradeBtn" style="display: block; margin-top: 5px; font-size: 0.8rem;">승진하기</button>
+      </div>
+    </div>
   </div>
 
-  <script>
-    // ==========================================
-    // 1. 상수 및 초기 상태 정의 (Missing Parts 채움)
-    // ==========================================
-    const TRADE_FEE_RATE = 0.001;
-    const LEVERAGE_FEE_RATE = 0.001;
-    const COIN_EXTRA_FEE_RATE = 0.002;
-    const SHORT_FEE_RATE = 0.0015;
-    const COIN_LONG_MATURITY_MS = 60000;
-    const COIN_SHORT_MATURITY_MS = 60000;
-    const SHORT_MATURITY_MS = 120000;
+  <!-- 주식 시장 -->
+  <div class="panel">
+    <h2>실시간 주식 시장</h2>
+    <div id="stockList"></div>
+  </div>
 
-    let player = {
-      cash: 10000000, // 초기 자본금 1000만 원
-      holdings: {},
-      avgCost: {},
-      marginDebt: {},
-      longExpiry: {},
-      shortProceeds: {},
-      shortExpiry: {}
-    };
+  <!-- 펀드 시장 -->
+  <div class="panel">
+    <h2>해화이 펀드 (30초 후 정산)</h2>
+    <div id="fundList" class="fund-list"></div>
+  </div>
 
-    let items = [
-      { id: "stock_samsung", name: "삼성전자", price: 80000, sector: "stock" },
-      { id: "coin_btc", name: "비트코인", price: 90000000, sector: "coin" }
-    ];
+  <!-- 리더보드 -->
+  <div class="panel">
+    <h2>🏆 명예의 전당 (Top 20) - 매월 초기화</h2>
+    <div id="leaderboardList"></div>
+  </div>
 
-    // ==========================================
-    // 2. 누락되었던 헬퍼(Helper) 함수들 모형 구현
-    // ==========================================
-    function isSidecarActive(it) { return false; }
-    function isDelisted(it) { return false; }
-    function canTrade() { return true; }
-    function rejectTradeCooldown(id) { alert("거래 쿨타임입니다."); return false; }
-    function rejectSidecar(id) { alert("사이드카 발동 중! 거래 불가."); return false; }
-    function rejectDelisted(id) { alert("상장 폐지된 종목입니다."); return false; }
+  <!-- 정보 -->
+  <div class="panel" style="font-size: 0.85rem; color: #aaa;">
+    <h3 style="color: var(--primary); margin-bottom: 5px;">📜 해화이 거래소 가이드</h3>
+    <ul style="padding-left: 20px; margin-bottom: 10px;">
+      <li><strong>종목 한도:</strong> 모든 종목은 1원 ~ 1,000,000원 사이에서 움직입니다. 100만원에 도달하면 악재가 터져 폭락하며, 0원이 되면 상장폐지됩니다.</li>
+      <li><strong>자산세:</strong> 현금이 1,000만원을 초과하면 <strong>매 정각(1시, 2시 등)마다 초과분의 2%</strong>가 세금으로 징수됩니다. (오프라인 상태여도 접속 시 일괄 징수됨)</li>
+      <li><strong>환생:</strong> 총 자산 10억 달성 시 환생 가능하며, 환생 시 매도할 때 마이너스 수익률을 환생 1회당 1%씩 깎아줍니다. (예: 수익률 -10% -> -9%로 손실 완화)</li>
+    </ul>
+    <h3 style="color: var(--primary); margin-bottom: 5px;">🛠️ 패치 노트</h3>
+    <ul style="padding-left: 20px;">
+      <li>2026-07-19 해화이 거래소 최초 출시 — 실시간 가격 시뮬레이터</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+/* ========================= 백엔드 및 게임 설정 ========================= */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwiz5Y1nOZZJzKayCrjcHAKUDvlz-Op191LIwrv2GHkb9vuy0Gzkfd0JBD9QPKgwR4Ttg/exec";
+
+// 플레이어 데이터
+let player = {
+  name: "", password: "", cash: 1000000, holdings: {}, avgCost: {},
+  jobLevel: 1, rebirthCount: 0, fundInvestments: [], lastTaxTime: Date.now()
+};
+
+// 주식 종목 (공통 변동폭)
+let items = [
+  { id: "s1", name: "김성준의 체대입시 주식회사", price: 50000, vol: 0.05 },
+  { id: "s2", name: "이하랑의 강화중독 주식회사", price: 50000, vol: 0.05 },
+  { id: "s3", name: "김도훈의 멸치육수 주식회사", price: 50000, vol: 0.05 },
+  { id: "s4", name: "정해환의 교회가자 주식회사", price: 50000, vol: 0.05 },
+  { id: "s5", name: "윤창호의 축구교실 주식회사", price: 50000, vol: 0.05 }
+];
+
+// 펀드 목록
+const FUNDS = [
+  { id: "f1", name: "성준 펀드", min: -20, max: 20 },
+  { id: "f2", name: "하랑 펀드", min: -30, max: 30 },
+  { id: "f3", name: "도훈 펀드", min: -10, max: 10 },
+  { id: "f4", name: "해환 펀드", min: -10, max: 10 },
+  { id: "f5", name: "창호 펀드", min: -10, max: 10 }
+];
+
+// 직업 목록 (쿨타임 상향)
+const JOBS = [
+  { level: 1, name: "알바생", income: 20000, cooldown: 3000, cost: 0 },
+  { level: 2, name: "경력직", income: 45000, cooldown: 1500, cost: 500000 },
+  { level: 3, name: "매니저", income: 100000, cooldown: 1000, cost: 2000000 },
+  { level: 4, name: "점장", income: 200000, cooldown: 0.500, cost: 10000000 },
+  { level: 5, name: "슈퍼 점장", income: 400000, cooldown: 200, cost: 50000000 }
+];
+
+// 포맷팅 함수
+const won = (n) => Math.floor(n).toLocaleString() + "원";
+const getJob = () => JOBS.find(j => j.level === player.jobLevel) || JOBS[0];
+function showBanner(msg) {
+  const b = document.getElementById("eventBanner");
+  b.textContent = msg; b.style.display = "block";
+  setTimeout(() => b.style.display = "none", 2500);
+}
+
+/* ========================= 핵심 로직 ========================= */
+function totalPortfolio() {
+  let stockValue = 0;
+  for(let id in player.holdings) {
+    const it = items.find(i => i.id === id);
+    if(it) stockValue += player.holdings[id] * it.price;
+  }
+  let fundValue = player.fundInvestments.reduce((sum, f) => sum + f.amount, 0);
+  return player.cash + stockValue + fundValue;
+}
+
+function updateUI() {
+  document.getElementById("ui-cash").textContent = won(player.cash);
+  document.getElementById("ui-total").textContent = won(totalPortfolio());
+  document.getElementById("ui-rebirth").textContent = `${player.rebirthCount}번`;
+  
+  let stockValue = 0;
+  for(let id in player.holdings) {
+    const it = items.find(i => i.id === id);
+    if(it) stockValue += player.holdings[id] * it.price;
+  }
+  document.getElementById("ui-stock").textContent = won(stockValue);
+  
+  const job = getJob();
+  document.getElementById("jobTitle").textContent = `${job.name} (Lv.${job.level})`;
+  document.getElementById("jobDesc").textContent = `클릭당 ${won(job.income)} / 쿨타임 ${job.cooldown/1000}초`;
+  
+  const nextJob = JOBS.find(j => j.level === player.jobLevel + 1);
+  const upBtn = document.getElementById("jobUpgradeBtn");
+  if(nextJob) { upBtn.textContent = `승진 (${won(nextJob.cost)})`; upBtn.style.display="block"; }
+  else { upBtn.style.display="none"; }
+
+  renderStockList();
+  renderFundList();
+}
+
+/* ========================= 서버 연동 (API) ========================= */
+async function startGame() {
+  const name = document.getElementById("nameInput").value.trim();
+  const pwd = document.getElementById("passwordInput").value;
+  const err = document.getElementById("loginError");
+  const btn = document.getElementById("startBtn");
+
+  if(!name || !pwd) { err.textContent = "이름과 비밀번호를 모두 입력하세요."; return; }
+  
+  btn.disabled = true; btn.textContent = "연결 중...";
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST", body: JSON.stringify({ action: "join", name, password: pwd })
+    });
+    const data = await res.json();
+    if(!data.ok) { err.textContent = "입장 실패: " + (data.error==="wrong_password" ? "비번오류" : data.error); btn.disabled=false; btn.textContent="게임 시작"; return; }
     
-    function totalMarginDebtAll() {
-      return Object.values(player.marginDebt).reduce((sum, val) => sum + val, 0);
-    }
-    function totalPortfolio() {
-      let val = player.cash;
-      for (let id in player.holdings) {
-        let it = items.find(i => i.id === id);
-        if (it && player.holdings[id] > 0) val += it.price * player.holdings[id];
-      }
-      return val;
-    }
-    
-    function leverageMarginMultFor(it) { return 2.0; }
-    function shortMarginMultFor(it) { return 1.5; }
-    function consumeRebirthBonusIfAvailable() { return 0; } // 환생 보너스 없음으로 가정
-    function won(amount) { return Math.round(amount).toLocaleString() + "원"; }
-    
-    function currentShortExposure(id) {
-      const have = player.holdings[id] || 0;
-      if (have >= 0) return 0;
-      const it = items.find(i => i.id === id);
-      return Math.abs(have) * (it ? it.price : 0);
-    }
-
-    // UI 및 알림 관련 함수
-    function showEventBanner(msg) { alert(msg); }
-    function markTraded() { console.log("거래 발생 기록 완료"); }
-    function pushScore() { console.log("점수 갱신 완료"); }
-    function flashCard(id, type) {
-      const el = document.getElementById("card-" + id);
-      if (el) {
-        el.classList.remove("flash-up", "flash-down");
-        void el.offsetWidth; // 리플로우 강제 발생 (애니메이션 재시작을 위해)
-        if (type === "up") el.classList.add("flash-up");
-        if (type === "down") el.classList.add("flash-down");
-      }
-    }
-
-    // 화면 렌더링 함수
-    function renderWallet() {
-      document.getElementById('walletCash').innerText = `보유 현금: ${won(player.cash)}`;
-      let holdingsHtml = "<strong>보유 종목:</strong><br>";
-      for (let id in player.holdings) {
-        const qty = player.holdings[id];
-        if(qty !== 0) {
-            const type = qty > 0 ? "롱(매수)" : "숏(공매도)";
-            holdingsHtml += `- ${id}: ${Math.abs(qty)}주 (${type}) / 평단가: ${won(player.avgCost[id] || 0)}<br>`;
+    player.name = name; player.password = pwd;
+    if(data.existing) {
+      player.cash = Number(data.cash) || 1000000;
+      player.holdings = data.holdings || {};
+      player.jobLevel = Number(data.jobLevel) || 1;
+      player.rebirthCount = Number(data.rebirthCount) || 0;
+      player.fundInvestments = data.fundInvestments || [];
+      player.lastTaxTime = data.lastTaxTime ? new Date(data.lastTaxTime).getTime() : Date.now();
+      
+      // 복구 시 평단가는 현재가로 임시 세팅
+      for(let id in player.holdings) {
+        if(player.holdings[id] > 0) {
+          let it = items.find(i=>i.id===id);
+          if(it) player.avgCost[id] = it.price;
         }
       }
-      document.getElementById('walletHoldings').innerHTML = holdingsHtml || "보유 종목 없음";
+      showBanner(`환영합니다! 기존 자산 ${won(totalPortfolio())} 복구됨`);
+    } else {
+      player.lastTaxTime = Date.now();
+      showBanner("신규 가입을 환영합니다!");
     }
+    document.getElementById("loginModal").style.display = "none";
+    
+    checkOfflineTax(); // 오프라인 세금 정산
+    setInterval(tick, 1000); // 1초마다 주가 변동
+    setInterval(checkHourlyTax, 1000); // 매초 정각 확인
+    setInterval(pushData, 5000); // 5초마다 서버 저장
+    setInterval(fetchLeaderboard, 10000); // 10초마다 랭킹 갱신
+    
+    fetchLeaderboard();
+    updateUI();
+  } catch(e) {
+    err.textContent = "서버 연결 에러"; btn.disabled = false; btn.textContent = "게임 시작";
+  }
+}
 
-    function renderItems() {
-      const container = document.getElementById('itemsContainer');
-      container.innerHTML = "";
-      items.forEach(it => {
-        const div = document.createElement("div");
-        div.className = "item-row";
-        div.id = "card-" + it.id;
-        div.innerHTML = `
-          <span style="width:150px; font-weight:bold;">${it.name} (${it.sector})</span>
-          <span style="width:120px;">${won(it.price)}</span>
-          <input type="number" id="qty-${it.id}" value="1" min="1" style="width:60px;">
-          <button class="btn-buy" onclick="buy('${it.id}', document.getElementById('qty-${it.id}').value, 1)">매수</button>
-          <button class="btn-sell" onclick="sell('${it.id}', document.getElementById('qty-${it.id}').value)">매도</button>
-          <button class="btn-short" onclick="short('${it.id}', document.getElementById('qty-${it.id}').value)">공매도</button>
-          <button class="btn-cover" onclick="cover('${it.id}', document.getElementById('qty-${it.id}').value)">숏 상환</button>
-        `;
-        container.appendChild(div);
-      });
+async function pushData() {
+  if(!player.name) return;
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "update", name: player.name, password: player.password,
+        cash: player.cash, total: totalPortfolio(), holdings: player.holdings,
+        jobLevel: player.jobLevel, rebirthCount: player.rebirthCount,
+        fundInvestments: player.fundInvestments, marginDebt: {}, shortProceeds: {}
+      })
+    });
+    document.getElementById("lbStatus").textContent = "서버 실시간 연동 중 🟢";
+  } catch(e) {
+    document.getElementById("lbStatus").textContent = "서버 통신 오류 🔴";
+  }
+}
+
+async function fetchLeaderboard() {
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=leaderboard`);
+    const data = await res.json();
+    const lb = document.getElementById("leaderboardList");
+    if(!data.rows || data.rows.length === 0) { lb.innerHTML = "<div>랭킹 데이터가 없습니다.</div>"; return; }
+    
+    lb.innerHTML = data.rows.map((r, i) => `
+      <div class="lb-row ${r.name === player.name ? 'me' : ''}">
+        <div>${i+1}위. ${r.name} ${r.rebirthCount > 0 ? `(✨${r.rebirthCount})` : ''}</div>
+        <div>${won(r.total)}</div>
+      </div>
+    `).join("");
+  } catch(e){}
+}
+
+document.getElementById("startBtn").addEventListener("click", startGame);
+
+/* ========================= 주가 변동 & 시스템 ========================= */
+function tick() {
+  items.forEach(it => {
+    if(it.price === 0) return; // 상장폐지
+
+    let changeRate = (Math.random() * (it.vol * 2)) - it.vol;
+    let newPrice = Math.round(it.price * (1 + changeRate));
+    
+    // 악재 시스템 (100만원 돌파 시)
+    if(newPrice >= 1000000) {
+      showBanner(`🚨악재 발생!🚨 [${it.name}] 주가 폭락!`);
+      newPrice = Math.round(newPrice * (0.5 + Math.random() * 0.3)); // 20~50% 폭락
     }
-
-    // ==========================================
-    // 3. 작성해주신 핵심 거래 로직 (그대로 반영)
-    // ==========================================
-    function buy(id, qty, leverage = 1){
-      qty = parseInt(qty, 10);
-      if(isNaN(qty) || qty <= 0) return;
-
-      const it = items.find(i=>i.id===id);
-      if(!it) return;
-      if(isSidecarActive(it)) return rejectSidecar(id);
-      if(isDelisted(it)) return rejectDelisted(id);
-
-      const have = player.holdings[id] || 0;
-      if(have < 0){
-        // 숏 보유 중이면 자동으로 커버 먼저 진행
-        const coverQty = Math.min(qty, -have);
-        cover(id, coverQty);
-        const rem = qty - coverQty;
-        if(rem > 0) setTimeout(() => buy(id, rem, leverage), 50); 
-        return;
-      }
-
-      const price = it.price;
-      const totalPositionValue = price * qty;
-      let feeRate = TRADE_FEE_RATE;
-      if(leverage > 1) feeRate += LEVERAGE_FEE_RATE;
-      if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
-
-      const marginRequired = Math.round(totalPositionValue / leverage);
-      const fee = Math.round(marginRequired * feeRate);
-      const totalCost = marginRequired + fee;
-
-      if(player.cash < totalCost){
-        flashCard(id, "down");
-        showEventBanner("💸 현금이 부족해요");
-        return;
-      }
-
-      const debt = totalPositionValue - marginRequired;
-      const currentDebt = totalMarginDebtAll();
-      const maxDebt = totalPortfolio() * leverageMarginMultFor(it);
-
-      if(debt > 0 && (currentDebt + debt) > maxDebt){
-        flashCard(id, "down");
-        showEventBanner(`🛑 레버리지 부채 한도 초과! (총자산의 ${leverageMarginMultFor(it)}배까지 가능)`);
-        return;
-      }
-
-      // 매수 실행
-      player.cash -= totalCost;
-      const prevAvgCost = player.avgCost[id] || 0;
-      
-      // 평균 매입가 갱신 (부채 포함된 총 포지션 가치 기준)
-      player.avgCost[id] = ((have * prevAvgCost) + totalPositionValue) / (have + qty);
-      player.holdings[id] = have + qty;
-      
-      if(debt > 0){
-        player.marginDebt[id] = (player.marginDebt[id] || 0) + debt;
-      }
-
-      // 코인은 롱 포지션도 타임어택 존재
-      if(it.sector === "coin"){
-        player.longExpiry[id] = Date.now() + COIN_LONG_MATURITY_MS;
-      }
-
-      markTraded();
-      flashCard(id, "up");
-      pushScore();
-      renderItems();
-      renderWallet();
+    
+    if(newPrice < 1) newPrice = 0; // 상폐
+    
+    it.prevPrice = it.price;
+    it.price = newPrice;
+  });
+  
+  // 펀드 정산 체크
+  let now = Date.now();
+  for(let i = player.fundInvestments.length - 1; i >= 0; i--) {
+    let inv = player.fundInvestments[i];
+    if(now >= inv.resolveTime) {
+      let f = FUNDS.find(x => x.id === inv.fundId);
+      let randRate = (Math.random() * (f.max - f.min) + f.min) / 100;
+      let result = inv.amount * (1 + randRate);
+      player.cash += result;
+      showBanner(`[${f.name}] 펀드 만기! 수익률: ${(randRate*100).toFixed(1)}%`);
+      player.fundInvestments.splice(i, 1);
     }
+  }
+  updateUI();
+}
 
-    function sell(id, qty){
-      if(!canTrade()) return rejectTradeCooldown(id);
-      qty = parseInt(qty, 10);
-      if(isNaN(qty) || qty <= 0) return;
+function renderStockList() {
+  const container = document.getElementById("stockList");
+  container.innerHTML = items.map(it => {
+    const qty = player.holdings[it.id] || 0;
+    const avg = player.avgCost[it.id] || 0;
+    let returnRate = 0;
+    if(qty > 0 && avg > 0) returnRate = ((it.price - avg) / avg) * 100;
+    
+    let colorCls = it.price > (it.prevPrice||it.price) ? 'up' : (it.price < (it.prevPrice||it.price) ? 'down' : '');
+    let rateCls = returnRate > 0 ? 'color:var(--up)' : (returnRate < 0 ? 'color:var(--down)' : '');
+    
+    return `
+      <div class="stock-card">
+        <div class="stock-header">
+          <span class="stock-name">${it.name}</span>
+          <span class="stock-price ${colorCls}">${it.price === 0 ? '상장폐지' : won(it.price)}</span>
+        </div>
+        <div style="font-size:0.9rem; color:#aaa; display:flex; justify-content:space-between;">
+          <span>보유: ${qty}주 ${qty > 0 ? `(평단: ${won(avg)})` : ''}</span>
+          <span style="${rateCls}">${qty > 0 ? returnRate.toFixed(2) + '%' : ''}</span>
+        </div>
+        ${it.price > 0 ? `
+        <div class="stock-controls">
+          <input type="number" id="qty-${it.id}" value="1" min="1">
+          <button class="btn-up" onclick="buy('${it.id}')">매수</button>
+          <button class="btn-down" onclick="sell('${it.id}')">매도</button>
+          <button onclick="allInBuy('${it.id}')">풀매수</button>
+          <button onclick="allOutSell('${it.id}')">풀매도</button>
+        </div>` : '<div style="color:red; font-weight:bold;">거래 정지</div>'}
+      </div>
+    `;
+  }).join("");
+}
 
-      const it = items.find(i=>i.id===id);
-      if(!it) return;
-      if(isSidecarActive(it)) return rejectSidecar(id);
-      if(isDelisted(it)) return rejectDelisted(id);
+function buy(id) {
+  let it = items.find(i => i.id === id);
+  let qty = parseInt(document.getElementById(`qty-${id}`).value) || 1;
+  let cost = it.price * qty;
+  if(player.cash < cost) { showBanner("잔액이 부족합니다."); return; }
+  
+  let currentQty = player.holdings[id] || 0;
+  let currentAvg = player.avgCost[id] || 0;
+  player.avgCost[id] = ((currentQty * currentAvg) + cost) / (currentQty + qty);
+  player.holdings[id] = currentQty + qty;
+  player.cash -= cost;
+  updateUI();
+}
 
-      const have = player.holdings[id] || 0;
-      if(have <= 0) return;
-      
-      qty = Math.min(qty, have);
-      
-      const price = it.price;
-      const totalValue = price * qty;
-      let feeRate = TRADE_FEE_RATE;
-      if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
-      
-      const fee = Math.round(totalValue * feeRate);
-      
-      // 환생 보너스 적용 (1분 쿨타임)
-      const bonusRate = consumeRebirthBonusIfAvailable();
-      const bonusAmount = Math.round(totalValue * bonusRate);
-      
-      // 부채 상환 로직 (일부 매도 시 비율에 맞춰 상환)
-      let debtRepaid = 0;
-      if(player.marginDebt[id] > 0){
-        debtRepaid = Math.round(player.marginDebt[id] * (qty / have));
-        player.marginDebt[id] -= debtRepaid;
-        if(player.marginDebt[id] < 1) delete player.marginDebt[id];
-      }
+function sell(id) {
+  let it = items.find(i => i.id === id);
+  let qty = parseInt(document.getElementById(`qty-${id}`).value) || 1;
+  let currentQty = player.holdings[id] || 0;
+  if(currentQty < qty) { showBanner("보유 주식이 부족합니다."); return; }
 
-      const netProceeds = totalValue - fee + bonusAmount - debtRepaid;
-      
-      player.cash += netProceeds;
-      player.holdings[id] -= qty;
-      
-      if(player.holdings[id] === 0){
-        delete player.holdings[id];
-        delete player.avgCost[id];
-        delete player.marginDebt[id];
-        delete player.longExpiry[id];
-      }
+  let avg = player.avgCost[id];
+  let rate = (it.price - avg) / avg;
+  
+  // 환생 특전: 마이너스 수익률 깎아주기
+  if(rate < 0 && player.rebirthCount > 0) {
+    rate = Math.min(0, rate + (player.rebirthCount * 0.01));
+  }
+  
+  let sellPrice = avg * (1 + rate);
+  player.cash += (sellPrice * qty);
+  player.holdings[id] -= qty;
+  if(player.holdings[id] === 0) player.avgCost[id] = 0;
+  
+  updateUI();
+}
 
-      if(bonusAmount > 0){
-        showEventBanner(`✨ 환생 보너스 적용! 매도액에 ${won(bonusAmount)} 추가 지급`);
-      }
+function allInBuy(id) {
+  let it = items.find(i => i.id === id);
+  let maxQty = Math.floor(player.cash / it.price);
+  if(maxQty > 0) { document.getElementById(`qty-${id}`).value = maxQty; buy(id); }
+}
+function allOutSell(id) {
+  let qty = player.holdings[id] || 0;
+  if(qty > 0) { document.getElementById(`qty-${id}`).value = qty; sell(id); }
+}
 
-      markTraded();
-      flashCard(id, "down");
-      pushScore();
-      renderItems();
-      renderWallet();
+/* ========================= 펀드 시스템 ========================= */
+function renderFundList() {
+  const container = document.getElementById("fundList");
+  container.innerHTML = FUNDS.map(f => {
+    let inv = player.fundInvestments.find(x => x.fundId === f.id);
+    if(inv) {
+      let remain = Math.max(0, Math.ceil((inv.resolveTime - Date.now()) / 1000));
+      return `<div class="fund-item" style="color:var(--primary)">
+        <span>${f.name} (투자중: ${won(inv.amount)})</span>
+        <span>${remain}초 남음</span>
+      </div>`;
+    } else {
+      return `<div class="fund-item">
+        <span>${f.name} <small>(${f.min}% ~ +${f.max}%)</small></span>
+        <div>
+          <select id="famt-${f.id}">
+            <option value="1000000">100만</option>
+            <option value="10000000">1000만</option>
+            <option value="100000000">1억</option>
+          </select>
+          <button class="btn-up" onclick="investFund('${f.id}')">가입</button>
+        </div>
+      </div>`;
     }
+  }).join("");
+}
 
-    function short(id, qty){
-      if(!canTrade()) return rejectTradeCooldown(id);
-      qty = parseInt(qty, 10);
-      if(isNaN(qty) || qty <= 0) return;
+function investFund(id) {
+  let amt = Number(document.getElementById(`famt-${id}`).value);
+  if(player.cash < amt) { showBanner("현금이 부족합니다."); return; }
+  player.cash -= amt;
+  player.fundInvestments.push({ fundId: id, amount: amt, resolveTime: Date.now() + 30000 });
+  updateUI();
+}
 
-      const it = items.find(i=>i.id===id);
-      if(!it) return;
-      if(isSidecarActive(it)) return rejectSidecar(id);
-      if(isDelisted(it)) return rejectDelisted(id);
+/* ========================= 알바 및 직업 ========================= */
+let lastWorkTime = 0;
+document.getElementById("workBtn").addEventListener("click", () => {
+  let now = Date.now();
+  let job = getJob();
+  if(now - lastWorkTime < job.cooldown) { 
+    showBanner(`쿨타임! ${(job.cooldown/1000).toFixed(1)}초마다 가능합니다.`); 
+    return; 
+  }
+  
+  let isCrit = Math.random() < 0.1; // 10% 크리티컬
+  let earn = isCrit ? job.income * 2 : job.income;
+  player.cash += earn;
+  lastWorkTime = now;
+  showBanner(isCrit ? `🔥크리티컬! ${won(earn)} 획득!` : `알바 완료! ${won(earn)} 획득`);
+  updateUI();
+});
 
-      const have = player.holdings[id] || 0;
-      if(have > 0){
-        // 롱 보유 중이면 매도부터 자동 처리
-        sell(id, Math.min(qty, have));
-        return; 
+document.getElementById("jobUpgradeBtn").addEventListener("click", () => {
+  let next = JOBS.find(j => j.level === player.jobLevel + 1);
+  if(next && player.cash >= next.cost) {
+    player.cash -= next.cost;
+    player.jobLevel = next.level;
+    showBanner(`${next.name} (으)로 승진했습니다!`);
+    updateUI();
+  } else { showBanner("현금이 부족합니다."); }
+});
+
+/* ========================= 자산세 & 환생 ========================= */
+function checkOfflineTax() {
+  if(!player.lastTaxTime) return;
+  let last = new Date(player.lastTaxTime);
+  let now = new Date();
+  
+  // 정각(시) 단위로 몇 번 지났는지 계산
+  last.setMinutes(0,0,0);
+  last.setHours(last.getHours() + 1);
+  let hoursPassed = 0;
+  
+  while(last <= now) { hoursPassed++; last.setHours(last.getHours() + 1); }
+  
+  if(hoursPassed > 0 && player.cash > 10000000) {
+    let count = 0;
+    for(let i=0; i<hoursPassed; i++) {
+      if(player.cash > 10000000) {
+        player.cash -= (player.cash - 10000000) * 0.02;
+        count++;
       }
-
-      const price = it.price;
-      const totalValue = price * qty;
-      
-      let feeRate = SHORT_FEE_RATE;
-      if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
-      const fee = Math.round(totalValue * feeRate);
-      
-      if(player.cash < fee){
-        flashCard(id, "down");
-        showEventBanner("💸 수수료를 낼 현금이 부족해요");
-        return;
-      }
-
-      // 총 숏 노출 한도 검사
-      const currentShortExp = currentShortExposure(id);
-      const maxShortExp = totalPortfolio() * shortMarginMultFor(it);
-      
-      if(currentShortExp + totalValue > maxShortExp){
-        flashCard(id, "down");
-        showEventBanner(`🛑 숏 한도 초과! (총자산의 ${shortMarginMultFor(it)}배까지 노출 가능)`);
-        return;
-      }
-
-      player.cash -= fee;
-      
-      // 평균 진입가 갱신
-      const prevShortQty = Math.abs(have);
-      const prevAvgCost = player.avgCost[id] || 0;
-      player.avgCost[id] = ((prevShortQty * prevAvgCost) + totalValue) / (prevShortQty + qty);
-      
-      player.holdings[id] = have - qty;
-      
-      // 매도대금은 현금이 아니라 예치금으로 묶임
-      player.shortProceeds[id] = (player.shortProceeds[id] || 0) + totalValue;
-      
-      // 만기 갱신
-      player.shortExpiry[id] = Date.now() + (it.sector === "coin" ? COIN_SHORT_MATURITY_MS : SHORT_MATURITY_MS);
-
-      markTraded();
-      flashCard(id, "up");
-      pushScore();
-      renderItems();
-      renderWallet();
     }
+    if(count > 0) showBanner(`오프라인 자산세: 부재중 ${count}시간 치 세금(2%) 납부됨`);
+  }
+  player.lastTaxTime = Date.now();
+}
 
-    function cover(id, qty){
-      if(!canTrade()) return rejectTradeCooldown(id);
-      qty = parseInt(qty, 10);
-      if(isNaN(qty) || qty <= 0) return;
-
-      const it = items.find(i=>i.id===id);
-      if(!it) return;
-      if(isSidecarActive(it)) return rejectSidecar(id);
-      if(isDelisted(it)) return rejectDelisted(id);
-
-      const have = player.holdings[id] || 0;
-      if(have >= 0) return; // 숏 상태가 아님
-      
-      const currentShortQty = Math.abs(have);
-      qty = Math.min(qty, currentShortQty);
-      
-      const price = it.price;
-      const coverCost = price * qty;
-      let feeRate = TRADE_FEE_RATE;
-      if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
-      const fee = Math.round(coverCost * feeRate);
-      
-      // 예치금 회수 (비율대로)
-      const proceedsRecouped = Math.round((player.shortProceeds[id] || 0) * (qty / currentShortQty));
-      player.shortProceeds[id] -= proceedsRecouped;
-      if(player.shortProceeds[id] < 1) delete player.shortProceeds[id];
-      
-      // 차익 계산 (예치금 - 갚는 비용 - 수수료)
-      const netProfit = proceedsRecouped - coverCost - fee;
-      
-      player.cash += netProfit;
-      player.holdings[id] += qty;
-      
-      if(player.holdings[id] === 0){
-        delete player.holdings[id];
-        delete player.avgCost[id];
-        delete player.shortExpiry[id];
-        delete player.shortProceeds[id];
-      }
-
-      markTraded();
-      flashCard(id, "down");
-      pushScore();
-      renderItems();
-      renderWallet();
+function checkHourlyTax() {
+  let now = new Date();
+  if(now.getMinutes() === 0 && now.getSeconds() === 0) {
+    if(player.cash > 10000000) {
+      player.cash -= (player.cash - 10000000) * 0.02;
+      showBanner("🔔 매 정각 자산세 (초과분 2%)가 징수되었습니다.");
     }
+    player.lastTaxTime = Date.now();
+    updateUI();
+  }
+}
 
-    // ==========================================
-    // 4. 초기 구동
-    // ==========================================
-    window.onload = function() {
-      renderItems();
-      renderWallet();
-    };
-  </script>
+document.getElementById("rebirthBtn").addEventListener("click", () => {
+  if(totalPortfolio() >= 1000000000) {
+    if(confirm("정말 환생하시겠습니까? 보유 주식과 현금이 모두 초기화됩니다.")) {
+      player.cash = 1000000;
+      player.holdings = {};
+      player.avgCost = {};
+      player.jobLevel = 1;
+      player.fundInvestments = [];
+      player.rebirthCount += 1;
+      showBanner(`✨ ${player.rebirthCount}번째 환생 성공!`);
+      pushData();
+      updateUI();
+    }
+  } else { showBanner("환생 조건: 총 자산 10억원 이상"); }
+});
+
+</script>
 </body>
 </html>
