@@ -1,244 +1,394 @@
-parseInt(qty, 10);
-  if(isNaN(qty) || qty <= 0) return;
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>모의 투자 시스템</title>
+  <style>
+    body { font-family: 'Pretendard', sans-serif; background: #f4f6f8; padding: 20px; }
+    .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .wallet-info { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: #333; }
+    .item-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    button { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .btn-buy { background: #ff4d4f; color: white; }
+    .btn-sell { background: #1890ff; color: white; }
+    .btn-short { background: #52c41a; color: white; }
+    .btn-cover { background: #faad14; color: white; }
+    /* 깜빡임 애니메이션 효과 */
+    .flash-up { animation: flashRed 0.5s; }
+    .flash-down { animation: flashBlue 0.5s; }
+    @keyframes flashRed { 50% { background-color: #ffe5e5; } }
+    @keyframes flashBlue { 50% { background-color: #e6f7ff; } }
+  </style>
+</head>
+<body>
 
-  const it = items.find(i=>i.id===id);
-  if(!it) return;
-  if(isSidecarActive(it)) return rejectSidecar(id);
-  if(isDelisted(it)) return rejectDelisted(id);
+  <!-- 지갑 상태창 -->
+  <div class="card" id="walletCard">
+    <div class="wallet-info" id="walletCash">보유 현금: 로딩 중...</div>
+    <div id="walletHoldings"></div>
+  </div>
 
-  const have = player.holdings[id] || 0;
-  if(have < 0){
-    // 숏 보유 중이면 자동으로 커버 먼저 진행
-    const coverQty = Math.min(qty, -have);
-    cover(id, coverQty);
-    const rem = qty - coverQty;
-    if(rem > 0) setTimeout(() => buy(id, rem, leverage), 50); 
-    return;
-  }
+  <!-- 종목 리스트 -->
+  <div class="card" id="marketCard">
+    <h3>주식/코인 시장</h3>
+    <div id="itemsContainer"></div>
+  </div>
 
-  const price = it.price;
-  const totalPositionValue = price * qty;
-  let feeRate = TRADE_FEE_RATE;
-  if(leverage > 1) feeRate += LEVERAGE_FEE_RATE;
-  if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
+  <script>
+    // ==========================================
+    // 1. 상수 및 초기 상태 정의 (Missing Parts 채움)
+    // ==========================================
+    const TRADE_FEE_RATE = 0.001;
+    const LEVERAGE_FEE_RATE = 0.001;
+    const COIN_EXTRA_FEE_RATE = 0.002;
+    const SHORT_FEE_RATE = 0.0015;
+    const COIN_LONG_MATURITY_MS = 60000;
+    const COIN_SHORT_MATURITY_MS = 60000;
+    const SHORT_MATURITY_MS = 120000;
 
-  const marginRequired = Math.round(totalPositionValue / leverage);
-  const fee = Math.round(marginRequired * feeRate);
-  const totalCost = marginRequired + fee;
+    let player = {
+      cash: 10000000, // 초기 자본금 1000만 원
+      holdings: {},
+      avgCost: {},
+      marginDebt: {},
+      longExpiry: {},
+      shortProceeds: {},
+      shortExpiry: {}
+    };
 
-  if(player.cash < totalCost){
-    flashCard(id, "down");
-    showEventBanner("💸 현금이 부족해요");
-    return;
-  }
+    let items = [
+      { id: "stock_samsung", name: "삼성전자", price: 80000, sector: "stock" },
+      { id: "coin_btc", name: "비트코인", price: 90000000, sector: "coin" }
+    ];
 
-  const debt = totalPositionValue - marginRequired;
-  const currentDebt = totalMarginDebtAll();
-  const maxDebt = totalPortfolio() * leverageMarginMultFor(it);
+    // ==========================================
+    // 2. 누락되었던 헬퍼(Helper) 함수들 모형 구현
+    // ==========================================
+    function isSidecarActive(it) { return false; }
+    function isDelisted(it) { return false; }
+    function canTrade() { return true; }
+    function rejectTradeCooldown(id) { alert("거래 쿨타임입니다."); return false; }
+    function rejectSidecar(id) { alert("사이드카 발동 중! 거래 불가."); return false; }
+    function rejectDelisted(id) { alert("상장 폐지된 종목입니다."); return false; }
+    
+    function totalMarginDebtAll() {
+      return Object.values(player.marginDebt).reduce((sum, val) => sum + val, 0);
+    }
+    function totalPortfolio() {
+      let val = player.cash;
+      for (let id in player.holdings) {
+        let it = items.find(i => i.id === id);
+        if (it && player.holdings[id] > 0) val += it.price * player.holdings[id];
+      }
+      return val;
+    }
+    
+    function leverageMarginMultFor(it) { return 2.0; }
+    function shortMarginMultFor(it) { return 1.5; }
+    function consumeRebirthBonusIfAvailable() { return 0; } // 환생 보너스 없음으로 가정
+    function won(amount) { return Math.round(amount).toLocaleString() + "원"; }
+    
+    function currentShortExposure(id) {
+      const have = player.holdings[id] || 0;
+      if (have >= 0) return 0;
+      const it = items.find(i => i.id === id);
+      return Math.abs(have) * (it ? it.price : 0);
+    }
 
-  if(debt > 0 && (currentDebt + debt) > maxDebt){
-    flashCard(id, "down");
-    showEventBanner(`🛑 레버리지 부채 한도 초과! (총자산의 ${leverageMarginMultFor(it)}배까지 가능)`);
-    return;
-  }
+    // UI 및 알림 관련 함수
+    function showEventBanner(msg) { alert(msg); }
+    function markTraded() { console.log("거래 발생 기록 완료"); }
+    function pushScore() { console.log("점수 갱신 완료"); }
+    function flashCard(id, type) {
+      const el = document.getElementById("card-" + id);
+      if (el) {
+        el.classList.remove("flash-up", "flash-down");
+        void el.offsetWidth; // 리플로우 강제 발생 (애니메이션 재시작을 위해)
+        if (type === "up") el.classList.add("flash-up");
+        if (type === "down") el.classList.add("flash-down");
+      }
+    }
 
-  // 매수 실행
-  player.cash -= totalCost;
-  const prevAvgCost = player.avgCost[id] || 0;
-  
-  // 평균 매입가 갱신 (부채 포함된 총 포지션 가치 기준)
-  player.avgCost[id] = ((have * prevAvgCost) + totalPositionValue) / (have + qty);
-  player.holdings[id] = have + qty;
-  
-  if(debt > 0){
-    player.marginDebt[id] = (player.marginDebt[id] || 0) + debt;
-  }
+    // 화면 렌더링 함수
+    function renderWallet() {
+      document.getElementById('walletCash').innerText = `보유 현금: ${won(player.cash)}`;
+      let holdingsHtml = "<strong>보유 종목:</strong><br>";
+      for (let id in player.holdings) {
+        const qty = player.holdings[id];
+        if(qty !== 0) {
+            const type = qty > 0 ? "롱(매수)" : "숏(공매도)";
+            holdingsHtml += `- ${id}: ${Math.abs(qty)}주 (${type}) / 평단가: ${won(player.avgCost[id] || 0)}<br>`;
+        }
+      }
+      document.getElementById('walletHoldings').innerHTML = holdingsHtml || "보유 종목 없음";
+    }
 
-  // 코인은 롱 포지션도 타임어택 존재
-  if(it.sector === "coin"){
-    player.longExpiry[id] = Date.now() + COIN_LONG_MATURITY_MS;
-  }
+    function renderItems() {
+      const container = document.getElementById('itemsContainer');
+      container.innerHTML = "";
+      items.forEach(it => {
+        const div = document.createElement("div");
+        div.className = "item-row";
+        div.id = "card-" + it.id;
+        div.innerHTML = `
+          <span style="width:150px; font-weight:bold;">${it.name} (${it.sector})</span>
+          <span style="width:120px;">${won(it.price)}</span>
+          <input type="number" id="qty-${it.id}" value="1" min="1" style="width:60px;">
+          <button class="btn-buy" onclick="buy('${it.id}', document.getElementById('qty-${it.id}').value, 1)">매수</button>
+          <button class="btn-sell" onclick="sell('${it.id}', document.getElementById('qty-${it.id}').value)">매도</button>
+          <button class="btn-short" onclick="short('${it.id}', document.getElementById('qty-${it.id}').value)">공매도</button>
+          <button class="btn-cover" onclick="cover('${it.id}', document.getElementById('qty-${it.id}').value)">숏 상환</button>
+        `;
+        container.appendChild(div);
+      });
+    }
 
-  markTraded();
-  flashCard(id, "up");
-  pushScore();
-  renderItems();
-  renderWallet();
-}
+    // ==========================================
+    // 3. 작성해주신 핵심 거래 로직 (그대로 반영)
+    // ==========================================
+    function buy(id, qty, leverage = 1){
+      qty = parseInt(qty, 10);
+      if(isNaN(qty) || qty <= 0) return;
 
-function sell(id, qty){
-  if(!canTrade()) return rejectTradeCooldown(id);
-  qty = parseInt(qty, 10);
-  if(isNaN(qty) || qty <= 0) return;
+      const it = items.find(i=>i.id===id);
+      if(!it) return;
+      if(isSidecarActive(it)) return rejectSidecar(id);
+      if(isDelisted(it)) return rejectDelisted(id);
 
-  const it = items.find(i=>i.id===id);
-  if(!it) return;
-  if(isSidecarActive(it)) return rejectSidecar(id);
-  if(isDelisted(it)) return rejectDelisted(id);
+      const have = player.holdings[id] || 0;
+      if(have < 0){
+        // 숏 보유 중이면 자동으로 커버 먼저 진행
+        const coverQty = Math.min(qty, -have);
+        cover(id, coverQty);
+        const rem = qty - coverQty;
+        if(rem > 0) setTimeout(() => buy(id, rem, leverage), 50); 
+        return;
+      }
 
-  const have = player.holdings[id] || 0;
-  if(have <= 0) return;
-  
-  qty = Math.min(qty, have);
-  
-  const price = it.price;
-  const totalValue = price * qty;
-  let feeRate = TRADE_FEE_RATE;
-  if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
-  
-  const fee = Math.round(totalValue * feeRate);
-  
-  // 환생 보너스 적용 (1분 쿨타임)
-  const bonusRate = consumeRebirthBonusIfAvailable();
-  const bonusAmount = Math.round(totalValue * bonusRate);
-  
-  // 부채 상환 로직 (일부 매도 시 비율에 맞춰 상환)
-  let debtRepaid = 0;
-  if(player.marginDebt[id] > 0){
-    debtRepaid = Math.round(player.marginDebt[id] * (qty / have));
-    player.marginDebt[id] -= debtRepaid;
-    if(player.marginDebt[id] < 1) delete player.marginDebt[id];
-  }
+      const price = it.price;
+      const totalPositionValue = price * qty;
+      let feeRate = TRADE_FEE_RATE;
+      if(leverage > 1) feeRate += LEVERAGE_FEE_RATE;
+      if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
 
-  const netProceeds = totalValue - fee + bonusAmount - debtRepaid;
-  
-  player.cash += netProceeds;
-  player.holdings[id] -= qty;
-  
-  if(player.holdings[id] === 0){
-    delete player.holdings[id];
-    delete player.avgCost[id];
-    delete player.marginDebt[id];
-    delete player.longExpiry[id];
-  }
+      const marginRequired = Math.round(totalPositionValue / leverage);
+      const fee = Math.round(marginRequired * feeRate);
+      const totalCost = marginRequired + fee;
 
-  if(bonusAmount > 0){
-    showEventBanner(`✨ 환생 보너스 적용! 매도액에 ${won(bonusAmount)} 추가 지급`);
-  }
+      if(player.cash < totalCost){
+        flashCard(id, "down");
+        showEventBanner("💸 현금이 부족해요");
+        return;
+      }
 
-  markTraded();
-  flashCard(id, "down");
-  pushScore();
-  renderItems();
-  renderWallet();
-}
+      const debt = totalPositionValue - marginRequired;
+      const currentDebt = totalMarginDebtAll();
+      const maxDebt = totalPortfolio() * leverageMarginMultFor(it);
 
-function short(id, qty){
-  if(!canTrade()) return rejectTradeCooldown(id);
-  qty = parseInt(qty, 10);
-  if(isNaN(qty) || qty <= 0) return;
+      if(debt > 0 && (currentDebt + debt) > maxDebt){
+        flashCard(id, "down");
+        showEventBanner(`🛑 레버리지 부채 한도 초과! (총자산의 ${leverageMarginMultFor(it)}배까지 가능)`);
+        return;
+      }
 
-  const it = items.find(i=>i.id===id);
-  if(!it) return;
-  if(isSidecarActive(it)) return rejectSidecar(id);
-  if(isDelisted(it)) return rejectDelisted(id);
+      // 매수 실행
+      player.cash -= totalCost;
+      const prevAvgCost = player.avgCost[id] || 0;
+      
+      // 평균 매입가 갱신 (부채 포함된 총 포지션 가치 기준)
+      player.avgCost[id] = ((have * prevAvgCost) + totalPositionValue) / (have + qty);
+      player.holdings[id] = have + qty;
+      
+      if(debt > 0){
+        player.marginDebt[id] = (player.marginDebt[id] || 0) + debt;
+      }
 
-  const have = player.holdings[id] || 0;
-  if(have > 0){
-    // 롱 보유 중이면 매도부터 자동 처리
-    sell(id, Math.min(qty, have));
-    return; // 숏은 다음 틱이나 버튼 재입력 유도 (동시 처리 꼬임 방지)
-  }
+      // 코인은 롱 포지션도 타임어택 존재
+      if(it.sector === "coin"){
+        player.longExpiry[id] = Date.now() + COIN_LONG_MATURITY_MS;
+      }
 
-  const price = it.price;
-  const totalValue = price * qty;
-  
-  let feeRate = SHORT_FEE_RATE;
-  if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
-  const fee = Math.round(totalValue * feeRate);
-  
-  if(player.cash < fee){
-    flashCard(id, "down");
-    showEventBanner("💸 수수료를 낼 현금이 부족해요");
-    return;
-  }
+      markTraded();
+      flashCard(id, "up");
+      pushScore();
+      renderItems();
+      renderWallet();
+    }
 
-  // 총 숏 노출 한도 검사
-  const currentShortExp = currentShortExposure(id);
-  const maxShortExp = totalPortfolio() * shortMarginMultFor(it);
-  
-  if(currentShortExp + totalValue > maxShortExp){
-    flashCard(id, "down");
-    showEventBanner(`🛑 숏 한도 초과! (총자산의 ${shortMarginMultFor(it)}배까지 노출 가능)`);
-    return;
-  }
+    function sell(id, qty){
+      if(!canTrade()) return rejectTradeCooldown(id);
+      qty = parseInt(qty, 10);
+      if(isNaN(qty) || qty <= 0) return;
 
-  player.cash -= fee;
-  
-  // 평균 진입가 갱신
-  const prevShortQty = Math.abs(have);
-  const prevAvgCost = player.avgCost[id] || 0;
-  player.avgCost[id] = ((prevShortQty * prevAvgCost) + totalValue) / (prevShortQty + qty);
-  
-  player.holdings[id] = have - qty;
-  
-  // 매도대금은 현금이 아니라 예치금으로 묶임
-  player.shortProceeds[id] = (player.shortProceeds[id] || 0) + totalValue;
-  
-  // 만기 갱신
-  player.shortExpiry[id] = Date.now() + (it.sector === "coin" ? COIN_SHORT_MATURITY_MS : SHORT_MATURITY_MS);
+      const it = items.find(i=>i.id===id);
+      if(!it) return;
+      if(isSidecarActive(it)) return rejectSidecar(id);
+      if(isDelisted(it)) return rejectDelisted(id);
 
-  markTraded();
-  flashCard(id, "up");
-  pushScore();
-  renderItems();
-  renderWallet();
-}
+      const have = player.holdings[id] || 0;
+      if(have <= 0) return;
+      
+      qty = Math.min(qty, have);
+      
+      const price = it.price;
+      const totalValue = price * qty;
+      let feeRate = TRADE_FEE_RATE;
+      if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
+      
+      const fee = Math.round(totalValue * feeRate);
+      
+      // 환생 보너스 적용 (1분 쿨타임)
+      const bonusRate = consumeRebirthBonusIfAvailable();
+      const bonusAmount = Math.round(totalValue * bonusRate);
+      
+      // 부채 상환 로직 (일부 매도 시 비율에 맞춰 상환)
+      let debtRepaid = 0;
+      if(player.marginDebt[id] > 0){
+        debtRepaid = Math.round(player.marginDebt[id] * (qty / have));
+        player.marginDebt[id] -= debtRepaid;
+        if(player.marginDebt[id] < 1) delete player.marginDebt[id];
+      }
 
-function cover(id, qty){
-  if(!canTrade()) return rejectTradeCooldown(id);
-  qty = parseInt(qty, 10);
-  if(isNaN(qty) || qty <= 0) return;
+      const netProceeds = totalValue - fee + bonusAmount - debtRepaid;
+      
+      player.cash += netProceeds;
+      player.holdings[id] -= qty;
+      
+      if(player.holdings[id] === 0){
+        delete player.holdings[id];
+        delete player.avgCost[id];
+        delete player.marginDebt[id];
+        delete player.longExpiry[id];
+      }
 
-  const it = items.find(i=>i.id===id);
-  if(!it) return;
-  if(isSidecarActive(it)) return rejectSidecar(id);
-  if(isDelisted(it)) return rejectDelisted(id);
+      if(bonusAmount > 0){
+        showEventBanner(`✨ 환생 보너스 적용! 매도액에 ${won(bonusAmount)} 추가 지급`);
+      }
 
-  const have = player.holdings[id] || 0;
-  if(have >= 0) return; // 숏 상태가 아님
-  
-  const currentShortQty = Math.abs(have);
-  qty = Math.min(qty, currentShortQty);
-  
-  const price = it.price;
-  const coverCost = price * qty;
-  let feeRate = TRADE_FEE_RATE;
-  if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
-  const fee = Math.round(coverCost * feeRate);
-  
-  // 예치금 회수 (비율대로)
-  const proceedsRecouped = Math.round((player.shortProceeds[id] || 0) * (qty / currentShortQty));
-  player.shortProceeds[id] -= proceedsRecouped;
-  if(player.shortProceeds[id] < 1) delete player.shortProceeds[id];
-  
-  // 차익 계산 (예치금 - 갚는 비용 - 수수료)
-  const netProfit = proceedsRecouped - coverCost - fee;
-  
-  player.cash += netProfit;
-  player.holdings[id] += qty;
-  
-  if(player.holdings[id] === 0){
-    delete player.holdings[id];
-    delete player.avgCost[id];
-    delete player.shortExpiry[id];
-    delete player.shortProceeds[id];
-  }
+      markTraded();
+      flashCard(id, "down");
+      pushScore();
+      renderItems();
+      renderWallet();
+    }
 
-  markTraded();
-  flashCard(id, "down");
-  pushScore();
-  renderItems();
-  renderWallet();
-}
+    function short(id, qty){
+      if(!canTrade()) return rejectTradeCooldown(id);
+      qty = parseInt(qty, 10);
+      if(isNaN(qty) || qty <= 0) return;
 
-function flashCard(id, type){
-  const el = document.getElementById("card-"+id);
-  if(el){
-    el.classList.remove("flash-up", "flash-down", "market-locked");
-    void el.offsetWidth; // trigger reflow
-    if(type === "up") el.classList.add("flash-up");
-    if(type === "down") el.classList.add("flash-down");
-    if(type === "sidecar" || type === "delisted" || type === "cooldown") el.classList.add("market-locked");
-  }
-}
+      const it = items.find(i=>i.id===id);
+      if(!it) return;
+      if(isSidecarActive(it)) return rejectSidecar(id);
+      if(isDelisted(it)) return rejectDelisted(id);
+
+      const have = player.holdings[id] || 0;
+      if(have > 0){
+        // 롱 보유 중이면 매도부터 자동 처리
+        sell(id, Math.min(qty, have));
+        return; 
+      }
+
+      const price = it.price;
+      const totalValue = price * qty;
+      
+      let feeRate = SHORT_FEE_RATE;
+      if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
+      const fee = Math.round(totalValue * feeRate);
+      
+      if(player.cash < fee){
+        flashCard(id, "down");
+        showEventBanner("💸 수수료를 낼 현금이 부족해요");
+        return;
+      }
+
+      // 총 숏 노출 한도 검사
+      const currentShortExp = currentShortExposure(id);
+      const maxShortExp = totalPortfolio() * shortMarginMultFor(it);
+      
+      if(currentShortExp + totalValue > maxShortExp){
+        flashCard(id, "down");
+        showEventBanner(`🛑 숏 한도 초과! (총자산의 ${shortMarginMultFor(it)}배까지 노출 가능)`);
+        return;
+      }
+
+      player.cash -= fee;
+      
+      // 평균 진입가 갱신
+      const prevShortQty = Math.abs(have);
+      const prevAvgCost = player.avgCost[id] || 0;
+      player.avgCost[id] = ((prevShortQty * prevAvgCost) + totalValue) / (prevShortQty + qty);
+      
+      player.holdings[id] = have - qty;
+      
+      // 매도대금은 현금이 아니라 예치금으로 묶임
+      player.shortProceeds[id] = (player.shortProceeds[id] || 0) + totalValue;
+      
+      // 만기 갱신
+      player.shortExpiry[id] = Date.now() + (it.sector === "coin" ? COIN_SHORT_MATURITY_MS : SHORT_MATURITY_MS);
+
+      markTraded();
+      flashCard(id, "up");
+      pushScore();
+      renderItems();
+      renderWallet();
+    }
+
+    function cover(id, qty){
+      if(!canTrade()) return rejectTradeCooldown(id);
+      qty = parseInt(qty, 10);
+      if(isNaN(qty) || qty <= 0) return;
+
+      const it = items.find(i=>i.id===id);
+      if(!it) return;
+      if(isSidecarActive(it)) return rejectSidecar(id);
+      if(isDelisted(it)) return rejectDelisted(id);
+
+      const have = player.holdings[id] || 0;
+      if(have >= 0) return; // 숏 상태가 아님
+      
+      const currentShortQty = Math.abs(have);
+      qty = Math.min(qty, currentShortQty);
+      
+      const price = it.price;
+      const coverCost = price * qty;
+      let feeRate = TRADE_FEE_RATE;
+      if(it.sector === "coin") feeRate += COIN_EXTRA_FEE_RATE;
+      const fee = Math.round(coverCost * feeRate);
+      
+      // 예치금 회수 (비율대로)
+      const proceedsRecouped = Math.round((player.shortProceeds[id] || 0) * (qty / currentShortQty));
+      player.shortProceeds[id] -= proceedsRecouped;
+      if(player.shortProceeds[id] < 1) delete player.shortProceeds[id];
+      
+      // 차익 계산 (예치금 - 갚는 비용 - 수수료)
+      const netProfit = proceedsRecouped - coverCost - fee;
+      
+      player.cash += netProfit;
+      player.holdings[id] += qty;
+      
+      if(player.holdings[id] === 0){
+        delete player.holdings[id];
+        delete player.avgCost[id];
+        delete player.shortExpiry[id];
+        delete player.shortProceeds[id];
+      }
+
+      markTraded();
+      flashCard(id, "down");
+      pushScore();
+      renderItems();
+      renderWallet();
+    }
+
+    // ==========================================
+    // 4. 초기 구동
+    // ==========================================
+    window.onload = function() {
+      renderItems();
+      renderWallet();
+    };
+  </script>
+</body>
+</html>
